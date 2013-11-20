@@ -1,0 +1,114 @@
+INTRODUCTION
+   OKF is an 32-bit x86 subroutine-threaded Forth.
+
+HISTORY
+   Sometime in 1998 I read, probably in a posting by Jeff Fox in
+   comp.lang.forth, about Charles Moore's goal of getting Forth with
+   1K of source and 1K of compiled object code in the context of Color
+   Forth.  This made me wonder if it was possible to make a 32-bit x86
+   Forth that could fit in 1KB.  So, I decided to have a go and
+   between 1998-12-22 and 1999-02-18 I created OKF.
+
+   I wanted the implementation to be interactive in the traditional
+   Forth sense and be able to use it to write Unix-style scripts.
+   That means the core has to contain an outer-interpreter, dictionary
+   lookup and number parsing.  By the time that's done, there isn't a
+   lot of space left so _everything_ else has to be outside the core,
+   even basic things like integer addition and subtraction!  All those
+   words have to be loaded on startup.  This means there is very
+   little policy in the kernel and the bulk of what you would
+   recognize as Forth is loaded on boot.  For example, see
+   lib/ans-core.okf for how to bootstrap something that looks
+   something like ANS-Forth.  Or look at lib/words.okf for a different
+   approach to naming which results in an nfib that looks like :-
+
+      [ nfib #0 2 < [? _0 1 | #0 1 - nfib <-> 2 - nfib + 1 + ] ]
+
+   After showing that it could be done I decided the goal was not
+   really worth it on a Unix device given that any modern device has
+   at leat 4KB pages and so that's a more meaningful limit.  That led
+   to OPF but that's a different Forth.  So, OKF implemenation stopped
+   with various things incomplete, including but not limited to :-
+
+      + Some form of path searching mechanism to find files.
+      + mmap the data and have it auto extend by catching any SEGV.
+      + negative numbers on input and output (just patch the
+        appropriate vectors with new code).
+      + some dictionary abstraction to allow ENVIRONMENT to be easily
+        implemented.
+      + give some feedback if a word cannot be found e.g. ? <word>
+        Easily done by patching the not_found vector.
+      + inlining.
+      + peep-hole optimization.
+
+   I never planned to release it since the world did not need another
+   (toy) Forth implementation, it needed people who were interested in
+   Forth to actually write Forth applications.  However, almost 15
+   years later there are (toy) Forth implementations everywhere so one
+   more isn't going to do any damanage that hasn't already been done.
+
+BUILD
+   There is no autoconf, just do :-
+
+      $ make
+
+   If all works well you should see :-
+
+      $ make
+      as  -o okf.o okf.s -I. -Ivars/bss
+      ld  -o okf okf.o
+
+   If not, adjust as necessary.
+
+   To show it is really less than 1KB :-
+
+      $ size okf
+         text	   data	    bss	    dec	    hex	filename
+          918	      0	  81984	  82902	  143d6	okf
+      $ 
+
+   The bss contains the dictionary and stack.
+
+RUN
+   There is no installation, just run from this directory.
+   If you want something that approximates ANS-FORTH then do :-
+
+      $ ./ans-forth
+
+   For example :-
+
+      $ ./ans-forth
+      1 2 + . CR quit
+      3
+      $    
+
+   You can also try a few of the tests :-
+
+      $ ./okf test/test-posix-mmap.okf
+      phew, made it
+      $ 
+
+      $ ./okf test/test-bsd-getrusage.okf
+      utime    0s 68004us
+      stime    0s 0us
+      shared   0
+      data     0
+      stack    0
+      reclaims 69
+      faults   0
+      swaps    0
+      $ 
+
+BIBLIOGRAPHY
+   Pentium Processor Family Developer's Manual Volume 3:
+   Architecture and Programming Manual
+   Intel, 1995
+
+   ANSI/IEEE X3.215-199x draft proposed American National Standard
+   for Information Systems -- Programming Languages -- Forth
+   X3J14 dpANS-6 -- June 30, 1993
+
+AUTHOR
+   Ninetes Retro <nineties-retro@mail.com>
+
+   a6c695df90a131f4c1395433040319582590deae8618b53d2e2e58cb99d234f7

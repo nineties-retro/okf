@@ -1,0 +1,42 @@
+HERE 8 ALLOT CONSTANT START-TIME
+HERE 8 ALLOT CONSTANT END-TIME
+HERE 8 ALLOT CONSTANT TIME-DIFFERENCE
+
+
+\ a-addr --
+
+: TIME 0 SWAP POSIX:GETTIMEOFDAY DROP ;
+
+
+\ a-addr --
+
+: DISPLAY-TIME DUP @ . SPACE CELL+ @ . CR ;
+
+
+\ a-addr1 a-addr2 -- a-addr1 a-addr2 u1 u2
+\ <code>a-addr1</code> and <code>a-addr2</code> are addresses of
+\ <code>struct timeval</code>.  <code>u1</code> is the microsecond
+\ difference between the two and <code>u2</code> is any second
+\ adjustment that needs to be made.
+
+: TIMEVAL-USEC-  OVER CELL+ @  OVER CELL+ @ - 
+                 DUP 0< IF ABS 1 ELSE 0 THEN ;
+  
+
+\ t1[a-addr] t2[a-addr] ta[a-addr] -- 
+\ Given the <code>timeval</code> <code>t1</code> and <code>timeval</code>
+\ <code>t2</code> calculate the difference <code>t1-t2</code> and store
+\ and store it in the <code>timeval</code> at <code>t3</code>.
+
+: TIMEVAL- 
+  >R TIMEVAL-USEC- SWAP R@ CELL+ ! >R 
+  @ SWAP @ SWAP - R> - R> ! ;
+
+
+START-TIME TIME
+
+END-TIME TIME
+
+END-TIME START-TIME TIME-DIFFERENCE TIMEVAL-
+
+TIME-DIFFERENCE DISPLAY-TIME

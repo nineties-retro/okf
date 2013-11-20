@@ -1,0 +1,1525 @@
+#! ANS FORTH CORE words.
+#! Not all the words are here, only the ones that have been needed to
+#! construct various examples/tests.
+#!
+#! See doc.ans-forth for more information.
+
+#! ANS FORTH CORE -
+#! n1|u1 n2|u2 -- n3|u3
+#! Subtract <code>n2|u2</code> from <code>n1|u1</code> giving the
+#! difference <code>n3|u3</code>
+
+#: -  2900458B , C5830445 , C304 ,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   29 45 04  subl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE @
+#! ( a-addr -- x )
+#! <code>x</code> is the value stored at <code>a-addr</code>.
+
+#: @  8B00458B , 00458900 , C3 ,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   8B 00     movl (%eax), %eax
+#!   89 45 00  movl %eax, (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE !
+#! x a-addr --       
+#! Store <code>x</code> at <code>a-addr</code>.
+
+#: !  8B04458B , 0389005D , C308C583 ,
+
+#!   8B 45 04  movl okf_cell_size(%ebp), %eax
+#!   8B 5D 00  movl (%ebp), %ebx
+#!   89 03     movl %eax, (%ebx)
+#!   93 C5 08  addl $(2*okf_cell_size), %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE C,
+#! ( char -- )
+#! Reserve one character of data space and store <code>char</code> in
+#! space.  If the data space is aligned when <code>,</code> begins execution,
+#! it will remain aligned when <code>,</code> finishes execution.  
+
+#: C,  8B00458B , 3D , 3 #% @ 3 - 3 #% !  3 #% ,
+       3D89AA , 3 #% @ 1 - 3 #% !  3 #% ,
+       C304C583 ,
+
+#! It is awkward because so little is defined at this point.  Could simplify
+#! it a bit if DUP and SWAP were lifted to above here.
+#!
+#!   8B 45 00           movl (%ebp), %eax
+#!   8B 3D XX XX XX XX  movl okf_dict_here, %edi
+#!   AA                 stosb
+#!   89 3D XX XX XX XX  movl %edi, okf_dict_here
+#!   83 C5 04           addl $okf_cell_size, %ebp
+#!   C3                 ret
+
+
+#! ANS FORTH CORE SWAP
+#! x2 x1 -- x1 x2
+
+#: SWAP  8700458B , 45890445 , 0000C300 ,
+
+#!   8B 45 00   movl (%ebp), %eax
+#!   87 45 04   xchg %eax, okf_cell_size(%ebp)
+#!   89 45 00   movl %eax, (%ebp)
+#!   C3         ret
+
+
+#! ANS FORTH CORE '
+#! "<spaces>name" -- xt
+#! Skip leading space delimiters.  Parse <code>name</code> delimited by
+#! a space.  Find <code>name</code> and return <code>xt</code>, the
+#! execution token for <code>name</code>.  See 
+#! doc.ans-forth.ambig-cond.name-not-found for what happens if the
+#! <code>name</code> is not found.
+
+#: '  3 #% @  E8 C, 5 #% @ SWAP - 5 - ,  
+      3 #% @  E9 C, 6 #% @ SWAP - 5 - , 
+
+#! The above results in the following code being planted :-
+#!
+#!   E8 XX XX XX XX  call smf_p_in_word_exec
+#!   E9 YY YY YY YY  jmp  smf_p_find_word_exec
+#!
+#! XXX: could call both via their vectors so that ' automatically takes
+#!      notice of any revectoring (most useful for a revectored find).
+
+
+#! ANS FORTH CORE +
+#! n1|u1 n2|u2 -- n3|u3
+#! Add <code>n2|u2</code> to <code>n1|u1</code> giving the 
+#! sum <code>n3|u3</code.
+
+#: +  0100458B , C5830445 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   01 45 04  addl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH EXECUTE
+#! ( i*x xt -- j*x )
+#! Remove <code>xt</code> from the stack and perform the semantics
+#! identified by it.  Other stack effects are due to the word
+#! <code>EXECUTE</code>d.
+
+#: EXECUTE  8300458b , e0ff04c5 ,
+
+
+#! ANS FORTH CORE ALIGN
+#! ( -- )
+#! If the data space pointer is not aligned, reserve enough space to align it.
+
+#: ALIGN  A1 C, 3 #% , 8303C083 , E0 C, FC C, A3 C, 3 #% , C3 C, 
+
+#!  A1 XX XX XX XX  movl okf_dict_here, %eax
+#!  83 C0 03        addl $(okf_cell_size-1), %eax
+#!  83 E0 FC        andl $~(okf_cel_size-1), %eax
+#!  A3 XX XX XX XX  movl %eax, okf_dict_here
+#!  C3              ret
+
+
+#! ANS FORTH CORE ALIGNED
+#! ( addr -- a-addr )
+#! <code>a-addr</code> is the first aligned address greater than or equal
+#! to <code>addr</code>.
+
+#: ALIGNED  8300458B , E08303C0 , 004589FC , C3 C,
+
+#!  8B 45 00  movl (%ebp), %eax
+#!  83 C0 03  addl $(okf_cell_size-1), %eax
+#!  83 E0 FC  andl $~(okf_cel_size-1), %eax
+#!  89 45 00  movl %eax, (%ebp)
+#!  C3        ret
+
+
+#! ANS FORTH CORE *
+#! n1|u1 n2|u2 -- n3|u3
+#! Multiply <code>n1|u1</code> by <code>n2|u2</code> giving the 
+#! product <code>n3|u3</code.
+
+#: *  F700458B , 45890465 , 04C58304 , C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   F7 65 04  mul okf_cell_size(%ebp)
+#!   89 45 04  movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE UM*
+#! n1|u1 n2|u2 -- n3|u3
+#! Multiply <code>u1</code> by <code>u2</code> giving the unsigned double-cell
+#! product <code>u3</code.  All values and arithmetic are unsigned.
+
+#: UM*  F700458B , 55890465 , 04458900 , C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   F7 65 04  mul okf_cell_size(%ebp)
+#!   89 55 00  movl %edx, (%ebp)
+#!   89 45 04  movl %eax, okf_cell_size(%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE IMMEDIATE
+#! --                     
+#! Make the most recent definition an immediate word.
+
+#: IMMEDIATE  A1 C, 4 #% , 8909588D , C30558 ,
+
+#! This is achieved by making okf_dh_exec in the word header point at the
+#! execution semantics of the word.
+#!
+#!   A1 XX XX XX XX  movl okf_dict_top, %eax
+#!   8D 58 09        leal $okf_dh__size(%eax), %ebx
+#!   89 58 05        movl %ebx, okf_dh_exec(%eax)
+#!   C3              ret
+
+
+#! ANS FORTH CORE LITERAL
+#! interpretation:
+#!   undefined.
+#! compilation: ( x -- )
+#!   Append the run-time semantics given below to the current definition.
+#! run-time: ( -- x )
+#!   Place <code>x</code> on the stack.
+
+#: LITERAL  8B C, 3D C, 3 #% , FC45C7B8 , 8B4FAB00 , B8AB0045 ,
+            0004ED83 , C5834FAB , 04 C, 89 C, 3D C, 3 #% , C3 C, IMMEDIATE
+
+#! For a given literal XXXXXXXX the following code is planted :-
+#!
+#!   C7 45 FC XX XX XX XX movl $XXXXXXXX, -okf_cell_size(%ebp)
+#!   83 ED 04             subl $okf_cell_size, %ebp
+#! 
+#! This is used rather than planting a call to a (lit) function followed
+#! by the integer since that would take 9 bytes which is only one less than
+#! the above sequence and considerably slower.
+#!
+#!   8B 3D XX XX XX XX  movl okf_dict_here, %edi
+#!   B8 C7 45 FC 00     movl $00FC45C7, %eax
+#!   AB                 stosl
+#!   4F                 decl %edi
+#!   8B 45 00           movl (%ebp), %eax
+#!   AB                 stosl
+#!   B8 83 ED 04 00     movl $0004ed83, %eax
+#!   AB                 stosl
+#!   4F                 decl %edi
+#!   83 C5 04           addl $okf_cell_size, %ebp
+#!   89 3D XX XX XX XX  movl %edi, okf_dict_here
+#!   C3                 ret
+
+
+#! ANS FORTH CORE C!
+#! n c-addr --
+#! Truncate <code>n</code> to a character and store it at <code>c-addr</code>.
+
+#: C!  8B04458B , 0388005D , C308C583 ,
+
+#!   8B 45 04  movl okf_cell_size(%ebp), %eax
+#!   8B 5D 00  movl (%ebp), %ebx
+#!   88 03     movb %al, (%ebx)
+#!   83 C5 08  addl $(2*okf_cell_size), %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE EXT COMPILE,
+#! interpretation:
+#!   undefined.
+#! execution: xt --
+#!   Append the execution semantics of the definition represented by 
+#!   <code>xt</code> to the execution semantics of the current definition.
+
+#: COMPILE,  8300458B , 988B04C5 , FFFFFFFC , FFF7908D ,
+             D839FFFF , 0F C, 84 C, 4 #% @ 5 + @  3 #% @ - 4 - ,
+             FF C, E3 C,
+
+#! The above uses the fact that the header for COMPILE, will have
+#! okf_compile_default in its okf_dh_exec slot.
+#!
+#!   8B 45 00           movl (%ebp), %eax
+#!   83 C5 04           addl $okf_cell_size, %ebp
+#!   8B 98 FC FF FF FF  movl -(okf_dh__size-okf_dh_exec)(%eax), %ebx
+#!   8D 90 F7 FF FF FF  leal -okf_dh__size(%eax), %edx
+#!   39 D8              cmpl %ebx, %eax
+#!   0F 84 XX XX XX XX  je okf_compile_default
+#!   FF E3              jmp %ebx
+
+
+#! ANS FORTH CORE (
+#! compilation: 
+#!   Perform the execution semantics given below.
+#! execution: ( "ccc<paren>" -- )
+#!   Parse <code>ccc</code> delimited by a right parenthesis ")".
+#!   <code>(</code> is an immediate word.
+
+#: (  B1 C, 29 C, E9 C, ' #! 3 #% @ - 2 - ,  IMMEDIATE
+
+#! Makes use of the fact that <code>okf_p_line_comment_exec</code>
+#! already does much of the work, so make use of it :-
+#!
+#!  B1 29           movb $')', %cl
+#!  E9 XX XX XX XX  jmp okf_p_line_comment_exec + 2
+
+
+#! ANS FORTH CORE DUP
+#! x -- x x     
+#! Duplicate <code>x</code>
+
+#: DUP  8900458B , ED83FC45 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   89 45 FC  movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04  subl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CREATE
+#! ("<spaces>name" -- )
+#! Skip leading whitespace delimiters.  Parse <code>name</code> delimited
+#! by whitespace.  Create a definition for <code>name</code> with the
+#! execution semantics defined below.
+#! <code>name</code> execution: ( -- a-addr )
+#!   <code>a-addr</code> is he adress of <code>name</code>'s data field.
+#!   The execution semantics of <code>name</code> may be extended by
+#!   using <code>DOES></code>.
+
+#: CREATE  ' #: COMPILE, 45C707C7 , 478D00FC , 03C0830C , A3FCE083 ,
+           3 #% , C7034789 , ED830747 , 00C3C304 ,
+
+#! Plants the following code for <code>name</code>
+#!
+#!   C7 45 FC XX XX XX XX  movl $XXXXXXXX, -okf_cell_size(%ebp)
+#!   83 ED 04              subl $okf_cell_size, %ebp
+#!   C3                    ret
+#!                         .space 1
+#!
+#! where XXXXXXXX is the first aligned address afer the one byte pad.
+#! <code>HERE</code> is also set to XXXXXXXX. Should <code>DOES></code>
+#! get used then the <code>subl</code>, <code>ret</code> and one byte pad
+#! are overwritten with a <code>jmp</code> to the new code :-
+#!
+#!   C7 45 FC XX XX XX XX  movl $XXXXXXXX, -okf_cell_size(%ebp)
+#!   E9 DD DD DD DD        jmp DDDDDDDD
+#!
+#! and the first (hidden) instruction in the <code>DOES></code>
+#! is the necessary <code>subl</code>.
+#!
+#!   E8 YY YY YY YY        call #:   ( leaves edi loaded with okf_dict_here )
+#!   C7 07 C7 45 FC 00     movl $0x00FC45C7, (%edi)
+#!   8D 47 0C              leal 12(%edi), %eax
+#!   83 C0 03              addl $(okf_cell_size-1), %eax
+#!   83 E0 FC              andl $~(okf_cell_size-1), %eax
+#!   A3 XX XX XX XX        movl %eax, okf_dict_here
+#!   89 47 03              movl %eax, 3(%edi)
+#!   C7 47 07 83 ED 04 C3  movl $0xC304ED83, 7(%edi)
+#!   C3                    ret
+#!
+#! 12 is the length of the <code>movl</code> and <code>jmp<code>.
+#! 3 is the offset of XXXXXXXX.
+#! 7 is the offset of <code>subl</code> and <code>ret</code> instructions.
+
+
+#! ( R: addr1 addr2 -- )
+#! <code>addr2</code> is the address to return to in the calling definition.
+#! <code>addr1</code> is the address to return to in the calling definition
+#! of the calling definition.  After overwriting the <code>subl</code>
+#! planted by <code>CREATE</code> with a <code>jmp</code> to 
+#! <code>addr2</code> plants a <code>subl</code> at <code>HERE</code>
+#! and then returns to <code>addr1</code>.
+
+#: (DOES>)  8B C, 1D C, 4 #% , 7B8DE9B0 , 5F8DAA10 , D8295804 , AB C, C3 C,
+
+#!   8B 1D XX XX XX XX  movl okf_dict_top, %ebx
+#!   B0 E9              movb $0xe9, %al
+#!   8D 7B 10           leal (okf_dh__size+7)(%ebx), %edi
+#!   AA                 stosb
+#!   8D 5F 04           leal 4(%edi), %ebx
+#!   58                 popl %eax
+#!   29 D8              subl %ebx, %eax
+#!   AB                 stosl
+#!   C3                 ret
+#!
+#! The 7 is the length of the <code>movl</code> instruction planted by
+#! <code>CREATE</code> and so <code>%edi</code> ends up with the address
+#! that the <code>jmp</code> instruction needs to be planted at.  The 4
+#! comes from the length (in bytes) of the <code>jmp</code> offset (the
+#! preceeding <code>stosb</code> has taken care of the <code>jmp</code>
+#! itself).
+
+
+#! ANS FORTH CORE DOES>
+#! interpretation:
+#!   undefined.
+#! compilation:
+#! run-time: ( -- ) ( R: addr1 -- )
+#!   Replace the execution semantics of the most recent definition,
+#!   referred to as <code>name</code>, with the <code>name</code>
+#!   execution semantics given below.  Return control to the 
+#!   appropriate point in the calling definition by jumping to 
+#!   <code>addr1</code>.  XXX: explain what happens if current word
+#!   was not defined (in)directly by <code>CREATE</code>.
+#! initation: ( i*x -- i*x addr ) ( R: -- addr2 )
+#!   Save <code>addr2</code>, the address to return to in the calling
+#!   definition, on the return stack.  Place the data field address
+#!   <code>addr</code> of <code>name</code> on stack.  The stack effects
+#!   <code>i*x</code> represent arguments to <code>name</code>.
+#! <code>name</code> execution: ( i*x -- j*x )
+#!   Execute the portion of the definition that begins with the initiation
+#!   semantics appended by the <code>DOES></code> which modified
+#!   <code>name</code>.  The stack effects <code>i*x</code> and 
+#!   <code>j*x</code> represent arguments to and results from
+#!   <code>name</code>, respectively.
+
+#: DOES>  ' (DOES>) LITERAL  ' COMPILE, COMPILE, 
+          9004ED83 LITERAL ' , COMPILE, C3 C, IMMEDIATE
+
+#! The above plants something like :-
+#!
+#!   movl $(DOES>), -okf_cell_size(%ebp)
+#!   subl $okf_cell_size, %ebp
+#!   call COMPILE,
+#!   movl $0x9004ED83, -okf_cell_size(%ebp)
+#!   subl $okf_cell_size, %ebp
+#!   call ,
+#!   ret
+#!
+#! which when executed plants something like :-
+#!
+#!   E8 XX XX XX XX  call (DOES>)
+#!   83 ED 04        subl $okf_cell_size, %ebp
+#!   90              nop
+#!
+#! The reason for the nop is that to get rid of it would require 
+#! more code to adjust <code>HERE</code> and it is not clear that it
+#! is worth it, especially since I rarely use <code>DOES></code>.
+
+
+
+#! #DEFINED-COMPILE is the action that should take place when a word is
+#! found whilst in compilation mode.  It is a low level word that
+#! can expect the following arguments :-
+#!
+#!   %eax = length of the word-name.
+#!   %edx = start of word header.
+#!   %edi = start of word-name.
+
+#: #DEFINED-COMPILE  000562FF ,
+
+#! All it does is call the execution slot in the header which for 
+#! most words just means that <code>okf_comp_default</code> is called
+#! and all that does is plant a <code>call</code> instruction.
+#!
+#!  FF 62 05  jmp okf_dh_exec(%edx)
+
+
+#! #NUMBER-COMPILE is the action that should take place when a word is
+#! found whilst in compilation mode.  It is a low level word that can
+#! expect the following arguments :-
+#!
+#!   %eax = length of string
+#!   %esi = start of string
+#!
+
+#: #NUMBER-COMPILE  8B C, 1D C, 9 #% , C985D3FF , 75 C, 0B C, 
+                    83FC7D89 , ED C, 04 C, 
+                    3 #% @  E9 C, ' LITERAL SWAP - 5 - , A1 C,
+                    0B #% , FF C, E0 C,
+
+#! Assuming the number is valid <code>LITERAL</code> is called to
+#! plant it in the current definition.  If the number is not valid,
+#! then the <code>okf_abort_vector</code> is called.
+#!
+#!  8B 1D XX XX XX XX  movl okf_number_vector, %ebx
+#!  FF D3              call %ebx
+#!  85 C9              testl %ecx, %ecx
+#!  75 0B              jne abort
+#!  89 7D FC           movl %edi, -okf_cell_size(%ebp)
+#!  83 ED 04           subl $okf_cell_size, %ebp
+#!  E9 YY YY YY YY     jmp LITERAL
+#! abort:
+#!  A1 ZZ ZZ ZZ ZZ     movl okf_abort_vector, %eax
+#!  FF E0              jmp %eax
+
+
+#: #SAVED-EVALUATION-VECTORS  ' #DEFINED-COMPILE , ' #NUMBER-COMPILE ,
+
+
+#! ANS FORTH CORE [
+#! interpretation:
+#!   undefined.
+#! compilation:
+#!   Perform the execution semantics given below.
+#! execution: ( -- )
+#!   Enter interpretation state.  <code>[</code> is an immediate word.
+
+#: [  8D C, 35 C, 7 #% , 8D C, 3D C, ' #SAVED-EVALUATION-VECTORS , 
+     06DD07DD , 1EDD1FDD , C3 C, IMMEDIATE
+
+
+#! ANS FORTH CORE ]
+#! ( -- )
+#! Enter compilation state.
+
+#: ]  8D C, 35 C, 7 #% , 8D C, 3D C, ' #SAVED-EVALUATION-VECTORS , 
+     06DD07DD , 1EDD1FDD , C3 C,
+
+#! Both <code>[</code> and <code>]</code> do the same thing: swap the
+#! current evaluation vectors with the saved versions.  This all works
+#! because the system starts up in interpretation mode, and the 
+#! saved evaluation vectors are initialised with the compilation actions.
+#!
+#!   8D 35 YY YY YY YY   leal okf_defined_vector, %esi
+#!   8D 3D XX XX XX XX   leal #SAVED-EVALUATION-VECTORS, %edi
+#!   DD 07               fldl (%edi)
+#!   DD 06               fldl (%esi)
+#!   DD 1F               fstpl (%edi)
+#!   DD 1E               fstpl (%esi)
+#!   C3                  ret
+#!
+#! XXX: could overflow the hardware floating point stack and lose
+#! some data if it is being left around across <code>]</code> calls.
+#! Perhaps should go the whole way and have a stack rather than just
+#! swapping back and forth.  It would certainly be more flexible.
+
+
+#! ANS FORTH CORE :
+#! ( C: "<spaces>name" -- )
+#!   Skip leading whitespace delimiters.  Parse <code>name</code> delimited by
+#!   whitespace.  Create a definition for <code>name</code> called a 
+#!   ``colon definition''.  Enter compilation state and start the
+#!   current definition.  Append the initiation semantics given below
+#!   to the current definition.
+#! initiation: ( i*x -- i*x ) ( R: -- addr )
+#!   Push the return address <code>addr</code> of the calling definition
+#!   on the return stack..  The stack effects <code>i*x</code> represents
+#!   arguments to <code>name</code>.
+#! <code>name</code> execution: ( i*x -- j*x )
+#!   Execute the definition <code>name</code>.  The stack effects 
+#!   <code>i*x</code> and <code>j*x</code> represent arguments to and
+#!   results from <code>name</code>, respectively.
+
+#: :  ' #: COMPILE, ' ] COMPILE, C3 C,
+
+#!   E8 XX XX XX XX      call smf_p_create
+#!   E8 YY YY YY YY      call ]
+#!   C3                  ret
+#!
+#! XXX: could tail call into <code>]</code>.
+
+
+#! ANS FORTH CORE ;
+#! interpretation
+#!   undefined
+#! compilation: ( -- )
+#!   Append the run-time semantics below to the current definition.
+#!   End the current definition, allow it to be found in the dictionary
+#!   and enter the interpretation state.
+#! run-time: ( -- ) ( R: addr -- )
+#!   Return to the appropriate point in the calling definition by jumping
+#!   to the address <code>addr<code>.
+
+#: ;  47C307C6 , 89 C, 3D C, 3 #% , ' [ COMPILE, C3 C, IMMEDIATE
+
+#!   C6 07 C3            movb $c3, (%edi)
+#!   47                  incl %edi
+#!   89 3D XX XX XX XX   movl %edi, smf_dict_here
+#!   E8 YY YY YY YY      call [
+#!   C3                  ret
+#!
+#! XXX: could tail call here.
+
+
+#! ANS FORTH CORE 1+
+#! ( n1|u1 -- n2|u2 )
+#! Add 1 to <code>n1|u1</code> giving the sum <code>n2|u2</code>.
+
+#: 1+  C30045FF ,
+
+#!   FF 45 00  incl (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE 1-
+#! ( n1|u1 -- n2|u2 )
+#! Subtract 1 from <code>n1|u1</code> giving the difference <code>n2|u2</code>.
+
+#: 1-  C3004DFF ,
+
+#!   FF 4D 00  decl (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE CELL+
+#! ( a-addr1 -- a-addr2 )
+#! Add the size in address units of a cell to <code>a-addr1</code> giving
+#! <code>a-addr2</code>
+
+#: CELL+  04004583 , C3 C,
+
+#!   83 45 00 04  addl $okf_cell_size, (%ebp)
+#!   C3           ret
+
+
+#! ANS FORTH CORE CELLS
+#! ( n1 -- n2 )
+#! <code>n2</code> is the size in address units of <code>n1</code> cells.
+
+#: CELLS  020065C1 , C3 C,
+
+#!   C1 65 00 02  shll $2, (%ebp)
+#!   C3           ret
+
+
+#! ANS FORTH CORE CHAR+
+#! ( c-addr1 -- c-addr2 )
+#! Add the size in address units of a character to <code>c-addr1</code>
+#! giving <code>c-addr2</code>.
+
+#: CHAR+  C30045FF ,
+
+#!   FF 45 00  incl (%ebp)
+#!   c3        ret
+
+
+#! ANS FORTH CORE CHARS
+#! ( n1 -- n2 )
+#! <code>n2</code> is the size in address units of <code>n1</code> 
+#! characters.
+
+#: CHARS  C3 C,
+
+#!   C3           ret
+
+
+#! ANS FORTH CORE =
+#! x1 x2 -- flag       
+#! <code>flag</code> is true if and only if <code>x1</code> is bit-for-bit
+#! the same as <code>x2</code>
+
+#: =  8B04C583 , 453BFC45 , 0045C700 , 00000000 , 0045940F , C3 C,
+
+#!   83 C5 04              addl $okf_cell_size, %ebp
+#!   8B 45 FC              movl -okf_cell_size(%ebp), %eax
+#!   3B 45 00              cmpl (%ebp), %eax
+#!   C7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   0F 94 45 00           sete (%ebp)
+#!   C3                    ret
+
+
+#! ANS FORTH CORE <
+#! n1 n2 -- flag
+#! <code>flag</code> is true if and only if <code>n1</code> is less then
+#! <code>n2</code>
+
+#: <  3900458B , 45C70445 , 00000004 , 459C0F00 , 04C58304 , C3 C,
+
+#!   8B 45 00              movl (%ebp), %eax
+#!   39 45 04              cmpl okf_cell_size(%ebp), %eax
+#!   C7 45 04 00 00 00 00  movl $0, okf_cell_size(%ebp)
+#!   0F 9C 45 04           setl okf_cell_size(%ebp)
+#!   83 C5 04              addl $okf_cell_size, %ebp
+#!   C3                    ret
+
+
+#! ANS FORTH CORE >
+#! n1 n2 -- flag
+#! <code>flag</code> is true if and only if <code>n1</code> is greater then
+#! <code>n2</code>
+
+#: >  3900458B , 45C70445 , 00000004 , 459F0F00 , 04C58304 , C3 C,
+
+#!   8B 45 00              movl (%ebp), %eax
+#!   39 45 04              cmpl okf_cell_size(%ebp), %eax
+#!   C7 45 04 00 00 00 00  movl $0, okf_cell_size(%ebp)
+#!   0F 9F 45 04           setg okf_cell_size(%ebp)
+#!   83 C5 04              addl $okf_cell_size, %ebp
+#!   C3                    ret
+
+
+#! ANS FORTH CORE INVERT
+#! ( x1 -- x2 )
+#! Invert all bits of <code>x1</code> giving its logical inverse 
+#! <code>x2</code>
+
+#: INVERT  C30055F7 ,
+
+#!   F7 55 00  notl (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE NEGATE
+#! ( n1 -- n2 )
+#! Negate <code>x1</code> giving its arithmetic inverse <code>x2</code>
+
+#: NEGATE  C3005DF7 ,
+
+#!   F7 5D 00  negl (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE ABS
+#! ( n -- u )
+#! <code>u</code> is the absolute value of <code>n</code>
+
+#: ABS  007D83 , 5DF7037D , C300 ,
+
+#!   83 7D 00 00  cmpl $0, (%ebp)
+#!   7D 03        jge  +3
+#!   F7 5D 00     negl (%ebp)
+#!   C3           ret
+
+
+
+#! ANS FORTH CORE U<
+#! u1 u2 -- flag
+#! <code>flag</code> is true if and only if <code>u1</code> is less then
+#! <code>u2</code>
+
+#: U<  3900458B , 45C70445 , 00000004 , 45920F00 , 04C58304 , C3 C,
+
+#!   8B 45 00              movl (%ebp), %eax
+#!   3B 45 04              cmpl okf_cell_size(%ebp), %eax
+#!   C7 45 04 00 00 00 00  movl $0, okf_cell_size(%ebp)
+#!   0F 92 45 04           setb okf_cell_size(%ebp)
+#!   83 C5 04              addl $okf_cell_size, %ebp
+#!   C3                    ret
+
+
+#! ANS FORTH CORE DROP
+#! x --    
+#! Remove <code>x</code> from the stack
+
+#: DROP  C304C583 ,
+
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE OVER
+#! x1 x2 -- x1 x2 x1
+#! Place a copy of <code>x1</code> on the top of the stack.
+
+#: OVER  8904458B , ED83FC45 , 04 C, C3 C,
+
+#!   8B 45 04  movl okf_cell_size(%ebp), %eax
+#!   89 45 FC  movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04  subl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE C@
+#! c-addr -- n
+#! Fetch the character stored at <code>c-addr</code> and zero extend
+#! it to a cell and place it on the stack.
+
+#: C@  3100458B , 89188ADB , 00C3005D ,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   31 DB     xorl %eax, %eax
+#!   8A 18     movb (%eax), %bl
+#!   89 5D 00  movl %ebx, (%ebp)
+#!   C3        ret
+
+
+#! ANS FORTH CORE +!
+#! n|u a-addr --
+#! Add <code>n|u</code> to the single-cell number at <code>a-addr</code>
+
+#: +!  8B04458B , 0303005D , C5830389 , 08 C, C3 C,
+
+#!   8B 45 04   movl okf_cell_size(%ebp), %eax
+#!   8B 5D 00   movl (%ebp), %ebx
+#!   03 03      addl (%ebx), %eax
+#!   89 03      movl %eax, (%ebx)
+#!   83 C5 08   addl $(2*okf_cell_size), %ebp
+#!   C3         ret
+
+
+#! ANS FORTH CORE >R
+#! interpretation:
+#!   Undefined.
+#! execution: ( x -- ) ( R: -- x )
+#!   Move <code>x</code> to the return stack.
+
+#: >R  0075FF58 , FF04C583 , E0 C,
+
+#!   58        popl %eax
+#!   FF 75 00  pushl (%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   FF E0     jmp %eax
+
+
+#! ANS FORTH CORE R>
+#! interpretation:
+#!   Undefined.
+#! execution: ( -- x ) ( R: x -- )
+#!   Move <code>x</code> from the return stack to the data stack.
+
+#: R>  FC458F58 , FF04ED83 , E0 C,
+
+#!   58        popl %eax
+#!   8F 45 FC  popl -okf_cell_size(%ebp)
+#!   83 ED 04  subl $okf_cell_size, %ebp
+#!   FF E0     jmp %eax
+
+
+#! ANS FORTH CORE R@
+#! interpretation:
+#!   Undefined.
+#! execution: ( -- x ) ( R: x -- x )
+#!   Copy <code>x</code> from the return stack to the data stack.
+
+#: R@  0424448B , 83FC4589 , C304ED ,
+
+#!   8B 44 24 04  movl okf_cell_size(%esp), %eax
+#!   89 45 FC     movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04     subl $okf_cell_size, %ebp
+#!   C3           ret
+
+
+#! ANS FORTH CORE 0<
+#! n -- flag
+#! <code>flag</code> is true if and only if <code>n</code> is less
+#! than zero.
+
+#: 0<  C700458B , 00000045 , C0850000 , 00459C0F , C3 C,
+
+#!   8B 45 00              movl (%ebp), %eax
+#!   C7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   85 C0                 testl %eax, %eax
+#!   0F 9C 45 00           setl (%ebp)
+#!   C3                    ret
+
+
+#! ANS FORTH CORE 0=
+#! x -- flag
+#! <code>flag</code> is true if and only if <code>x</code> is equal to zero.
+
+#: 0=  C700458B , 00000045 , C0850000 , 0045940F , C3 C,
+
+#!   8B 45 00              movl (%ebp), %eax
+#!   C7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   85 C0                 testl %eax, %eax
+#!   0F 94 45 00           setz (%ebp)
+#!   C3                    ret
+
+
+#! ANS FORTH CORE AND
+#! x1 x2 -- x3
+#! <code>x3</code> is the bit-by-bit logical ``and'' of <code>x1</code>
+#! and <code>x2</code>.
+
+#: AND  2100458B , C5830445 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   21 45 04  andl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE OR
+#! x1 x2 -- x3
+#! <code>x3</code> is the bit-by-bit logical ``or'' of <code>x1</code>
+#! and <code>x2</code>.
+
+#: OR  0900458B , C5830445 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   09 45 04  orl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE XOR
+#! x1 x2 -- x3
+#! <code>x3</code> is the bit-by-bit exclusive-or' of <code>x1</code>
+#! and <code>x2</code>.
+
+#: XOR  3100458B , C5830445 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   31 45 04  orl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE RSHIFT
+#! x1 u -- x2
+#! Perform a logical right shift of <code>u</code> bit-places on 
+#! <code>x1</code> giving <code>x2</code>.  If <code>u</code> is 
+#! greater than or equal to the number of bits in <code>x1</code> then
+#! <code>x2</code> will be zero.
+
+#: RSHIFT  D3004D8B , C583046D , 04 C, C3 C,
+
+#!   8B 4D 00  movl (%ebp), %ecx
+#!   D3 6D 04  shrl %ecx, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE LSHIFT
+#! x1 u -- x2
+#! Perform a logical left shift of <code>u</code> bit-places on 
+#! <code>x1</code> giving <code>x2</code>.  If <code>u</code> is 
+#! greater than or equal to the number of bits in <code>x1</code> then
+#! <code>x2</code> will be zero.
+
+#: LSHIFT  D3004D8B , C5830465 , 04 C, C3 C,
+
+#!   8B 4D 00  movl (%ebp), %ecx
+#!   D3 65 04  shll %ecx, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE COUNT
+#! ( c-addr1 -- c-addr2 u )
+#! Return the character string specification for the counted string
+#! stored at <code>c-addr1</code>.  <code>c-addr2</code> is the address
+#! of the first character after <code>c-addr1</code>.  <code>u</code>
+#! is the contents of the character at <code>c-addr1</code>, which is
+#! the length in characters of the string at <code>c-addr2</code>.
+
+#! Something like the following should work :-
+#!
+#!   movl (%ebp), %eax
+#!   movzxb (%eax), %ebx
+#!   incl %eax
+#!   movl %ebx, -okf_cell_size(%ebp)
+#!   movl %eax, (%ebp)
+#!   subl $(2*okf_cell_size), %ebp
+#!   ret
+
+#! ANS FORTH CORE >NUMBER
+#! ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )
+#! <code>ud2</code> is the unsigned result of converting the characters
+#! within the string specified by <code>c-addr1</code> <code>u1</code>
+#! into digits, using the number in <code>BASE</code>, and adding each into
+#! <code>ud1</code> after multilying <code>ud1</code> by the number in
+#! <code>BASE</code>.  Conversion continues left-to-right until a
+#! character that is not convertible, including any ``+'' or ``-'',
+#! is encountered or the string is entirely converted.  <code>c-addr2</code>
+#! is the location of the first unconverted character or the first character
+#! past the end of the string if the string was entirely converted.
+#! <code>u2</code> is the number of unconverted characters in the string.
+#! XXX: describe what happens if <code>ud2</code> overflows during
+#! conversion.
+
+
+
+
+#! ANS FORTH CORE EXT PARSE
+#! ( char "ccc<char>" -- c-addr u )
+#! Parse ccc delimited by the delimiter <code>char</code>.
+#! <code>c-addr</code> is the address (in the dictionary) and <code>u</code>
+#! is the length of the parsed string.
+
+#: PARSE  8B C, 3D C, 3 #% ,  8B C, 1D C, 0E #% , 89004D8B ,
+          8B57007D , AAAC0873 , 15740A3C , F675C838 ,
+          4F087389 , 89 C, 3D C, 3 #% , 89DF295B , ED83FC7D , 
+          04 C, C3 C, 39 C,
+          E6751073 , 3914438A , 511074C8 , 590053FF ,
+          CD7FC085 , A1 C, 0B #% , 43C6E0FF ,
+          884E0A14 , C9EBFF4F ,
+
+#!   8B 3D XX XX XX XX  movl okf_dict_here, %edi
+#!   8B 1D YY YY YY YY  movl okf_in_current, %ebx
+#!   8B 4D 00           movl (%ebp), %ecx
+#!   89 7D 00           movl %edi, (%ebp)
+#!   57                 pushl %edi
+#! okf_parse_restart:
+#!   8B 73 08           movl okf_in_p(%ebx), %esi
+#! okf_parse_next:
+#!   AC                 lodsb
+#!   AA                 stosb
+#!   3C 0A              cmpb $'\n', %al
+#!   74 15              je okf_parse_nl
+#!   38 C8              cmpb %cl, %al
+#!   75 F6              jne okf_parse_next
+#! okf_parse_found:
+#!   89 73 08           movl %esi, okf_in_p(%ebx)
+#!   4F                 decl %edi
+#!   89 3D XX XX XX XX  movl %edi, okf_dict_here
+#!   5B                 popl %ebx
+#!   29 DF              subl %ebx, %edi
+#!   89 7D FC           movl %edi, -okf_cell_size(%ebp)
+#!   83 ED 04           subl $okf_cell_size, %ebp
+#!   C3                 ret
+#! okf_parse_nl:
+#!   39 73 10           cmpl %esi, okf_in_e(%ebx)
+#!   75 E6              jne okf_parse_next
+#!   8A 43 14           movb okf_in_last_char(%ebx), %al
+#!   39 C8              cmpb %cl, %al
+#!   74 10              je okf_parse_found_last
+#!   51                 pushl %ecx
+#!   FF 53 00           call okf_in_refill(%ebx)
+#!   59                 popl %ecx
+#!   85 C0              testl %eax, %eax
+#!   7F CD              jg okf_parse_restart
+#!   A1 ZZ ZZ ZZ ZZ     movl okf_abort_vector, %eax
+#!   FF E0              jmp %eax
+#! okf_parse_found_last:
+#!   C6 43 14           movb $'\n', okf_in_last_char(%ebx)
+#!   0A 4E              decl %esi
+#!   88 4F FF           movb %cl, -1(%edi)
+#!   EB C9              jmp okf_parse_found
+
+
+#! ANS FORTH STRING SLITERAL
+#! compilation: ( c-addr1 u -- )
+#!   Append the run-time semantics given below to the current definition
+#! run-time: ( -- c-addr2 u )
+#!   Return <code>c-addr2</code> <code>u</code> describing a string consisting
+#!   the characters specified by <code>c-addr1</code> <code>u</code>
+#!   during compilation.  A program shall not alter the returned string.
+
+#: SLITERAL  8B C, 3D C, 3 #% , FC45C7B8 , 8B4FAB00 , B8AB0445 ,
+             00F845C7 , 458B4FAB , 83B8AB00 , AB0008ED , 08C5834F ,
+             89 C, 3D C, 3 #% , C3 C, IMMEDIATE
+
+#!   8B 3D XX XX XX XX  movl okf_dict_here, %edi
+#!   B8 C7 45 FC 00     movl $00FC45C7, %eax
+#!   AB                 stosl
+#!   4F                 decl %edi
+#!   8B 45 04           movl okf_cell_size(%ebp), %eax
+#!   AB                 stosl
+#!   B8 C7 45 F8 00     movl $00F845C7, %eax
+#!   AB                 stosl
+#!   4F                 decl %edi
+#!   8B 45 00           movl (%ebp), %eax
+#!   AB                 stosl
+#!   B8 83 ED 08 00     movl $0008ED83, %eax
+#!   AB                 stosl
+#!   4F                 decl %edi
+#!   83 C5 08           addl $(okf_cell_size*2), %ebp
+#!   89 3D XX XX XX XX  movl %edi, okf_dict_here
+#!   C3                 ret
+#!
+#! Does the equivalent of the following :-
+#!
+#! : SLITERAL  C7 C, 45 C, F8 C, ,
+#!             C7 C, 45 C, FC C, ,
+#!             83 C, ED C, 08 C, ;  IMMEDIATE
+#!
+#! But takes less space and is quicker to execute i.e. 
+#! for a given string literal AAAAAAAA LLLLLLLL the following code is
+#! planted :-
+#!
+#!   C7 45 FC AA AA AA AA movl $AAAAAAAA, -okf_cell_size(%ebp)
+#!   C7 45 F8 LL LL LL LL movl $LLLLLLLL, -(okf_cell_size*2)(%ebp)
+#!   83 ED 08             subl $(okf_cell_size*2), %ebp
+#! 
+#! XXX: perhaps using floating point load/store would be shorter and quicker,
+#! for example, something like :-
+#!
+#!   83 ED 08                       subl $okf_double_cell_size, %ebp
+#!   DD ?? AA AA AA AA LL LL LL LL  fldl AAAAAAAALLLLLLLL
+#!   DD ??                          fstpl (%ebp)
+#!
+
+
+#! ANS FORTH CORE 2*
+#! ( x1 -- x2 )
+#! <code>x2</code> is the result of shifting <code>x1</code> one bit
+#! toward the most-significant bit, filling the vacated least significant
+#! bit with zero.
+
+#: 2*  010065C1 , C3 C,
+
+#!   C1 65 00 01  shll $1, (%ebp)
+#!   C3           ret
+
+
+#! ANS FORTH CORE 2DROP
+#! x1 x2 --    
+#! Drop the cell pair <code>x1 x2</code> from the stack
+
+#: 2DROP  C308C583 ,
+
+#!   83 C5 08  addl $okf_double_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE 2DUP
+#! x1 x2 -- x1 x2 x1 x2
+#! Duplicate cell pair <code>x1 x2</code>
+
+#: 2DUP  8904458B , 458BFC45 , F8458900 , C308ED83 ,
+
+#!   8B 45 04  movl okf_cell_size(%ebp), %eax
+#!   89 45 FC  movl %eax, -okf_cell_size(%ebp)
+#!   8B 45 00  movl (%ebp), %eax
+#!   89 45 F8  movl %eax, -okf_double_cell_size(%ebp)
+#!   83 ED 08  subl $okf_double_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE 2OVER
+#! x1 x2 x3 x4 -- x1 x2 x3 x4 x1 x2
+#! Copy cell pair <code>x1 x2</code> to the top of the stack.
+
+#: 2OVER  890C458B , 458BFC45 , F8458908 , C308ED83 ,
+
+#!   8B 45 0C  movl (3*okf_cell_size)(%ebp), %eax
+#!   89 45 FC  movl %eax, -okf_cell_size(%ebp)
+#!   8B 45 08  movl (2*okf_cell_size)(%ebp), %eax
+#!   89 45 F8  movl %eax, -okf_double_cell_size(%ebp)
+#!   83 ED 08  subl $okf_double_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE 2SWAP
+#! ( x1 x2 x3 x4 -- x3 x4 x1 x2 ) 
+#! Exchange the top two cell pairs
+
+#: 2SWAP  8700458B , 45890845 , 04458B00 , 890C4587 , C30445 ,
+
+#!   8B 45 00   movl (%ebp), %eax
+#!   87 45 08   xchg %eax, okf_double_cell_size(%ebp)
+#!   89 45 00   movl %eax, (%ebp)
+#!   8B 45 04   movl okf_cell_size(%ebp), %eax
+#!   87 45 0C   xchg %eax, (3*okf_cell_size)(%ebp)
+#!   89 45 04   movl %eax, okf_cell_size(%ebp)
+#!   C3         ret
+
+
+#! DEPTH
+#! ( -- +n )
+#! <code>+n</code> is the number of single-cell values contained in the
+#! data stack before <code>+n</code> was placed on the stack.
+
+#: DEPTH  A1 C, 0D #% , E8C1E829 , FC458902 , C304ED83 ,
+
+#!   A1 XX XX XX XX   movl okf_stack_base, %eax
+#!   29 E8            subl %ebp, %eax
+#!   C1 E8 02         shrl $2, %eax
+#!   89 45 FC         movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04         subl okf_cell_size, %ebp
+#!   C3               ret
+
+#! u1 n2 c-addr1 -- c-addr2 u2
+#! Convert <code>u1</code> to a string according to the base <code>n2</code>.
+#! <code>c-addr1</code> is the address of one character past the end where
+#! the string should be placed.  Returns the address of the start of the
+#! converted string <code>c-addr2</code> and its length <code>u2</code>.
+
+#: U2$  8B005D8B , 458B044D , 4BDE8908 , F1F7D231 ,
+        8030C280 , 037E39FA , 8807C280 , 75C08513 ,
+        085D89EA , 7589DE29 , 04C58304 , C3 C,
+
+#!   8B 5D 00  movl (%ebp), %ebx
+#!   8B 4D 04  movl 4(%ebp), %ecx
+#!   8B 45 08  movl 8(%ebp), %eax
+#!   89 DE     movl %ebx, %esi
+#! loop:
+#!   4B        decl %ebx
+#!   31 D2     xorl %edx, %edx
+#!   F7 F1     divl %ecx, %eax
+#!   80 C2 30  addb $'0', %dl
+#!   80 FA 39  cmpb $'9', %dl
+#!   7E 03     jle digit
+#!   80 C2 07  addb $('A'-'9'-1), %dl
+#! digit:
+#!   88 13     movb %dl, (%ebx)
+#!   85 C0     testl %eax, %eax
+#!   75 EA     jne loop
+#!   89 5D 08  movl %ebx, okf_double_cell_size(%ebp)
+#!   29 DE     subl %ebx, %esi
+#!   89 75 04  movl %esi, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE TYPE
+#! c-addr u --
+#! If use is greater than zero, display the character string specified
+#! by <code>c-addr</code> and <code>u</code>.
+#!
+#! Note that this does not do any buffering.
+
+#: TYPE  8B00558B , 01BB044D , B8000000 , 00000004 , C58380CD , 08 C, C3 C,
+
+#!   8B 55 00        movl (%ebp), %edx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   BB 01 00 00 00  movl $1, %ebx
+#!   B8 04 00 00 00  movl $4, %eax
+#!   CD 80           int  $0x80
+#!   83 C5 08        addl $okf_double_cell_size, %ebp
+#!   C3              ret
+
+
+#! ANS FORTH CORE POSTPONE
+#! interpretation:
+#!   undefined
+#! compilation: "<spaces>name" --
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   a space.  Find <code>name</code>.  Append the compilation semantics
+#!   of <code>name</code> to the current definition.  See 
+#!   doc.ans-forth.ambig-cond.name-not-found for what happens if the
+#!   <code>name</code> is not found.
+
+: POSTPONE  ' COMPILE, ; IMMEDIATE
+
+
+#! ( -- )
+#! NUL terminate the string at HERE
+
+: #NUL-TERMINATE  0 C, ;
+
+
+#! ANS FORTH CORE S"
+#! interpretation:
+#!   undefined.
+#! compilation ( "ccc<quote>" -- )
+#!   Parse <code>ccc</code> delimited by " (double quote).  Append the
+#!   run-time semantics given below to the current definition.
+#! run-time: ( -- c-addr u )
+#!   Return <code>c-addr</code> and <code>u</code> describing a
+#!   string consisting of the characters <code>ccc</code>.  A program
+#!   shall not alter the returned string.
+
+: S"  E9 C, 1 ,  22 PARSE  #NUL-TERMINATE 
+      OVER OVER SWAP 4 - +!  POSTPONE SLITERAL  ; IMMEDIATE
+
+
+#! ANS FORTH CORE CONSTANT
+#! interpretation:
+#!   Undefined.
+#! compilation: x "<spaces>name" --
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   a space.  Create a definition for <code>name</code> with the execution 
+#!   semantics defined below.
+#! execution: -- x
+#!   Place <code>x</code> on the stack.
+
+: CONSTANT  #: POSTPONE LITERAL C3 C, ;
+
+
+#! ANS FORTH CORE HERE
+#! -- addr
+#! <code>addr</code> is the data-space pointer.
+
+: HERE  3 #% @ ;
+
+
+#! ANS FORTH CORE BASE
+#! -- a-addr
+#! <code>a-addr</code> is address of a cell containing the current number
+#! conversion radix (2..36).
+
+: BASE  2 #% ;
+
+
+#! ANS FORTH CORE ALLOT
+#! n --
+#! If <code>c</code> is greater than zero, reserve <code>n</code>
+#! bytes of data space.  If <code>n</code> is less than zero, release
+#! <code>n</code> bytes of data space.
+
+: ALLOT  3 #% +! ;
+
+
+#! ANS FORTH CORE VARIABLE
+#! ( "<spaces>name" -- )
+#! Skip leading space delimiters.  Parse <code>name<code> delimited by a
+#! <code>space</code>.  Create a definition for <code>name</code> with
+#! the execution semantics defined below.  Reserve one cell of data space
+#! at an aligned address.
+#! <code>name</code> execution: ( -- a-addr )
+#! <code>a-addr</code> is the address of the reserved cell.  A program is 
+#! responsible for initialising the contents of the reserved cell.
+
+: VARIABLE  HERE 1 CELLS ALLOT CONSTANT ;
+
+#! Doesn't bother to align since it is not necessary on x86.
+
+
+#! -- c-addr
+#! Returns the address of one past the end of <code>pad</code>
+
+HERE 80 ALLOT HERE CONSTANT PAD-END
+
+
+#! ANS FORTH CORE EXT PAD
+#! -- c-addr
+#! <code>c-addr</code> is the address of a transient region that can
+#! be used to hold data for intermediate processing.
+
+CONSTANT PAD
+
+
+#! ANS FORTH CORE .
+#! n --
+#! Display <code>n</code> in free field format
+
+: .  BASE @ PAD-END U2$ TYPE ;
+
+
+#! ANS FORTH CORE U.
+#! u --
+#! Display <code>u</code> in free field format
+
+: U.  BASE @ PAD-END U2$ TYPE ;
+
+
+#! ANS FORTH CORE EMIT
+#! x --
+#! Truncate <code>x</code> to a character and display it.
+
+: EMIT  PAD C! PAD 1 TYPE ;
+
+
+#! ANS FORTH CORE CR
+#! --
+#! Cause subsequent output to appear at the beginning of the next line.
+
+: CR  0A EMIT ;
+
+
+#! ANS FORTH CORE SPACE
+#! --
+#! Display one space
+
+: SPACE  20 EMIT ;
+
+
+#! ANS FORTH CORE THEN
+#! interpretation:
+#!   Undefined.
+#! compilation: c-addr --
+#!   Resolve the 8-bit forward reference at <code>c-addr</code> using
+#!   the location of the execution semantics by (tail) calling 
+#!   <code>xt</code> and then append the run-time semantics given below
+#!   to the current definition.
+#! run-time: --
+#!   Continue execution.
+
+#: THEN  2900458B , 88FB89C7 , C583FF58 , 0000C304 ,  IMMEDIATE
+
+#! Calculates the correct 8-bit offset and patches <code>c-addr</code> -1
+#! with it.
+#!
+#!   8B 45 00  movl (%ebp), %eax
+#!   29 C7     subl %eax, %edi
+#!   89 FB     movl %edi, %ebx
+#!   88 58 FF  movb %bl, -1(%eax)
+#!   83 C5 04  addl $4, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE IF
+#! interpretation:
+#!   undefined
+#! compilation:  -- c-addr
+#!   <code>c-addr</code> is the address two bytes after the jz instruction.
+#!   To patch the instruction do the equivalent of 
+#!
+#!     offset SWAP 1 - C!
+#!   
+#!   Append the run-time semantics given below to the current definition.
+#! run-time: x --
+#!   If all bits of <code>x</code> are zero, continue execution at the
+#!   patched address. XXX improve the explanation.
+
+#: IF  458B07C7 , 47C78300 , 8504C504 , 0847C6C0 , 0AC78374 , 8904ED83 ,
+       3D C, 3 #% , C3007D89 , IMMEDIATE
+
+#! The first plants the following instructions :-
+#!
+#!   8B 45 00  movl (%ebp), %eax
+#!   83 C5 04  addl $4, %ebp
+#!   85 C0     testl %eax, %eax
+#!   74 XX     jz +XX
+#!
+#! after that it just sets up the dictionary and the addresses.
+#!
+#!   C7 07 8B 45 00 83  movl $0x8300458b, (%edi)
+#!   C7 47 04 C5 04 85  movl $0xC08504C5, 4(%edi)
+#!   C0 C6 47 08 74     movb $0x74, 8(%edi)
+#!   83 C7 0A           addl $0xa, %edi
+#!   83 ED 04           subl $0x4, %ebp
+#!   89 3D XX XX XX XX  movl %edi, smf_dict_here
+#!   89 7D 00           movl %edi, (%ebp)
+#!   C3                 ret
+
+
+#! ANS FORTH CORE ELSE
+#! compilation: c-addr1 -- c-addr2
+#!   Patches <code>c-addr1</code> - 1 and replaces it with 
+#!   <code>c-addr2</code> so that it can be patched by <code>(then)</code>.
+#!   Note that 8-bit branches are used so make sure that <code>|</code>
+#!   is used no more than 128 bytes away from <code>c-addr1</code>.
+#! run-time: --
+#!   XXX: explain
+
+#: ELSE  83EB07C6 , 3D8902C7 , 3 #% , 89005D8B , DF29007D , 
+         4388F889 , C3FF ,  IMMEDIATE
+
+#!   C6 07 EB           movb $0xEB, (%edi)
+#!   83 C7 02           addl $02, %edi
+#!   89 3D XX XX XX XX  movl %edi, okf_dict_here
+#!   8B 5D 00           movl (%ebp), %ebx
+#!   89 7D 00           movl %edi, (%ebp)
+#!   29 DF              subl %ebx, %edi
+#!   89 F8              movl %edi, %eax
+#!   88 43 FF           movb %al, -1(%ebx)
+#!   C3                 ret
+
+#! ANS FORTH CORE BEGIN
+#! interpretation:
+#!   undefined.
+#! compilation: ( -- addr )
+#!   Put the next location for a transfer of control on the stack.
+#!   Append the run-time semantics given below to the current definition.
+#! run-time: ( -- )
+#!   Continue execution.
+
+: BEGIN  HERE ; IMMEDIATE
+
+
+#! ANS FORTH CORE [']
+#! interpretation:
+#!   Undefined.
+#! compilation: "<spaces>name" --
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   a space.  Find <code>name</code>.  Append the run-time semantics
+#!   given below to the current definition.  Aborts if 
+#!   <code>name</code> is not found.
+#! run-time: -- xt
+#!   Place the execution token <code>xt</code> of <code>name</code> on
+#!   the stack.
+
+: [']  ' POSTPONE LITERAL ; IMMEDIATE
+
+
+#! ANS FORTH CORE DECIMAL
+#! -- 
+#! Set the numeric conversion radix to 10.
+
+: DECIMAL  0A BASE ! ;
+
+
+#! ANS FORTH CORE SOURCE
+#! ( -- c-addr u )
+#! <code>c-addr</code> is the addres of, and <code>u</code> is the
+#! number of characters in the input buffer.
+
+: SOURCE 0 0 ;
+
+#! OKF does not have an equivalent of an input buffer, so generate
+#! some values that will hopefully quickly abort any program that
+#! tries to use it.
+
+
+#! ANS FORTH CORE RECURSE
+#! interpretation:
+#!   undefined.
+#! compilation: ( -- )
+#!   Append the execution semantics of the current definition to the current
+#!   definition.  XXX: explain what happens if <code>RECURSE</code> appears
+#!   after <code>DOES></code>.n
+
+: RECURSE  4 #% @ 9 + COMPILE, ;  IMMEDIATE
+
+#! 9 is the current value of okf_dh__size.
+
+
+#! <code>ITERATE</code> is similar to <code>RECURSE</code>, the difference
+#! is that it jumps to the start of the current word rather than calling
+#! the current word.
+
+: ITERATE  E9 C,  4 #% @  3 #% @  - 5 + , ;  IMMEDIATE
+
+#! 5 = okf_dh_size (9) - call offset size (4)
+
+
+#! ANS FORTH CORE ."
+#! interpretation:
+#!   undefined.
+#! compilation: ( "ccc<quote>" -- )
+#!   Parse <code>ccc</code> delimited by " (double-quote).  Append the
+#!   run-time semantics given below to the current definition.
+#! run-time: ( -- )
+#!  Display <code>ccc</code>.
+
+: ."  POSTPONE S"  ['] TYPE COMPILE, ;  IMMEDIATE
+
+#! ANS FORTH CORE ABORT
+#! ( i*x -- ) ( R: j*x -- )
+#! The behaviour of <code>ABORT</code> is determined by vector 11.
+#! As default this will terminate OKF with no message.
+
+: ABORT  0B #% @ EXECUTE ;
+
+
+#! ANS FORTH CORE EXT PICK
+#! ( xu ... x1 x0 u -- xu ... x1 x0 xu )
+#! Remove <code>u</code>.  Copy the <code>xu</code> to the top of the
+#! stack.  See .doc.okf-ans-forth.ambig.less-than-u+2-items for what
+#! happens if there are less than <code>u+2</code> items on the stack
+#! before <code>PICK</code> is executed.
+
+#: PICK  8b00458b , 89048544 , C30045 ,
+
+#!  8b 45 00     movl (%ebp), %eax
+#!  8b 44 85 04  movl okf_cell_size(%ebp, %eax, okf_cell_size), %eax
+#!  89 45 00     movl %eax, (%ebp)
+#!  C3           ret
+
+
+#! ANS FORTH CORE ABORT"
+#! interpretation:
+#!   undefined.
+#! compilation: ( "ccc<quote>" -- )
+#!  Parse <code>ccc</code> delimited by a <code>"</code> (double-quote).
+#!  Append the run-time semantics given below to the current definition.
+#! run-time: ( i*x x1 -- i*x ) ( R: j*x -- j*x )
+#!  Remove <code>x1</code> from the stack.  If any bit of <code>x1</code>
+#!  is not zero, display <code>ccc</code> and perform an implementation
+#!  defined abort sequence that includes the function of <code>ABORT</code>.
+
+: (ABORT") 2 PICK IF TYPE ABORT ELSE 2DROP DROP THEN ;
+
+: ABORT"  POSTPONE S" ['] (ABORT") COMPILE, ; IMMEDIATE
+
+#! ANS FORTH CORE 2@
+#! ( a-addr -- x1 x2 )
+#! Fetch the cell pair <code>x1 x2</code> stored at <code>a-addr</code>.
+#! <code>x2</code> is stored at <code>a-addr</code> and <code>x1</code>
+#! is stored at the next consecutive cell.  It is equivalent to the
+#! sequence <code>DUP CELL+ @ SWAP @</code>.
+
+: 2@  DUP CELL+ @ SWAP @ ;
+
+#! Rewrite in machine code if and when it is ever used.
+
+
+#! ANS FORTH CORE 2!
+#! ( x1 x2 a-addr -- )
+#! Store the cell pair <code>x1 x2</code> at <code>a-addr</code>, with
+#! <code>x2</code> <code>a-addr</code> and <code>x1</code>
+#! at the next consecutive cell.  It is equivalent to the
+#! sequence <code>SWAP OVER ! CELL+ !</code>.
+
+: 2!  SWAP OVER ! CELL+ ! ;
+
+#! Rewrite in machine code if and when it is ever used.
+
+
+#! ANS FORTH CORE BL
+#! ( -- char )
+#! <code>char</code> is the character value for a space.
+
+20 CONSTANT BL

@@ -1,0 +1,53 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/okf.okf
+#< lib/posix.okf
+
+\ A simple nfib micro-benchmark.
+\
+\ Although the test looks like it is calculating the Fibonacci number,
+\ it doesn't.  The actual number it calculates is the number of calls
+\ that are made in calculating the answer.
+\
+\ To use the test, try different input values until you find one that
+\ takes approximately 30 seconds to run.  The idea being that if the
+\ test is running for 30 seconds, it is calculating the nfib time and
+\ not getting caught up in second order effects such as the time taken
+\ to parse/compile/startup the test.
+\
+\ Once you have a number, divide the answer by the time taken to get
+\ the nfib/sec rating.
+\
+\ For example, on my 486/DX2-66, OKF with no inlining or optimization
+\ can calculate nfib 33 (11405773) in 29.26 seconds.  This gives a nfib/sec
+\ rating of 389807 (11405773/29.26).  This compares with a rating of
+\ 1732985 for a C version compiled with gcc -O3.  Therefore on this
+\ benchmark OKF runs at 22% the speed of C.  
+\
+\ As a FORTH comparison, RPL with inlining can calculate nfib 35 (29860703)
+\ in 36.78 seconds.  So this gives an nfib/sec rating of 811873 
+\ (29860703/36.78).  Therefore OKF runs a 48% the speed of RPL on this
+\ benchmark.
+\
+\ Example Usage:
+\
+\  $ ./okf examples/nfib.okf 33
+\  33 11405773
+
+DECIMAL
+
+: NFIB  DUP 2 < IF DROP 1 ELSE DUP 1 - RECURSE SWAP 2 - RECURSE + 1 + THEN ;
+
+\ ( -- c-addr u )
+: SCRIPT-NAME  ARGV @ @ DUP STRLEN ;
+
+\ ( -- c-addr u )
+: ARG1  ARGV @ CELL+ @ DUP STRLEN ;
+
+: NFIB-WRAPPER  ARG1 ATOU 0= IF DUP . SPACE NFIB . CR THEN ;
+
+: WRONG-ARGS  SCRIPT-NAME TYPE SPACE ." wrong args bozo!" CR ;
+
+: MAIN  ARGC @ 2 = IF NFIB-WRAPPER ELSE DROP WRONG-ARGS THEN ;
+
+MAIN

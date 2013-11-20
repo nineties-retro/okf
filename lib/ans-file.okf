@@ -1,0 +1,81 @@
+\ ANS FORTH FILE
+\ An incomplete implementation of (unbuffered) IO.
+
+\ ( fileid -- u n )
+\ <code>u</code> is the current file position for the <code>fileid</code>.
+\ <code>n</code> indicates whether the operation was successful or not.
+\ <code>n</code> is zero if the operation is successful.
+
+: FILE-POSITION  >R 1 0 R> POSIX-LSEEK DUP 0< IF DUP ELSE 0 THEN ;
+
+
+#! ANS FORTH FILE FILE-SIZE
+#! NOT IMPLEMENTED.
+
+\ INCLUDE-FILE
+\ ( i*x fileid -- j*x )
+
+: INCLUDE-FILE  #{ ;
+
+
+\ R/O
+\ ( -- fam )
+\ <code>fam</code> is the implementation-defined value for selecting
+\ the ``read-only'' file-access method.
+
+POSIX-O_RDONLY CONSTANT R/O
+
+
+\ R/W
+\ ( -- fam )
+\ <code>fam</code> is the implementation-defined value for selecting
+\ the ``read/write'' file-access method.
+
+POSIX-O_RDWR CONSTANT R/W
+
+
+\ ( c-addr u1 fileid -- u2 n )
+\ Read <code>u1</code> consecutive characters to <code>c-addr</code>
+\ from the current position of the file identified by fileid.
+\
+\ If <code>u1</code> characters are read without exception, <code>n</code>
+\ is zero and <code>u2</code> is equal to <code>u1</code>.
+\
+\ If the end of the file is reached before <code>u1</code> characters are
+\ read, <code>n</code> is zero and <code>u2</code> is the number of
+\ characters actually read.
+
+: READ-FILE  POSIX-READ DUP 0< IF DUP ELSE 0 THEN ;
+
+
+\ ( u fileid -- n )
+\ Reposition the file identified by <code>fileid</code> to <code>u</code>.
+\ If successful <code>n</code> is the offset measured
+\ from the beginning of the file.  If unsuccessful, <code>n</code>
+\ is negative and represents the error.
+
+: REPOSITION-FILE  >R >R 0 R> R> POSIX-LSEEK ;
+
+
+\ W/O
+\ ( -- fam )
+\ <code>fam</code> is the implementation-defined value for selecting
+\ the ``write only'' file-access method.
+
+POSIX-O_RDWR CONSTANT W/O
+
+
+\ WRITE-FILE
+\ ( c-addr u fileid -- ior )
+\ Write <code>u</code> consecutive characters from <code>c-addr</code>
+\ to the file identified by <code>fileid</code> starting at its current
+\ position.  <code>ior</code> is the implementation defined I/O result
+\ code -- it is negative if the write failed otherwise it is the number
+\ of characters written, which may be less than <code>u</code>.
+\
+\ At conclusion of the operation, <code>FILE-POSITION</code> returns the
+\ next file position after the last character written to the file, and
+\ <code>FILE-SIZE</code> returns a value greater than or equal to the value
+\ returned by FILE-POSITION.
+
+\ NOT IMPLEMENTED

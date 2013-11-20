@@ -1,0 +1,51 @@
+#! ( -- a-addr )
+#! <code>a-addr</code> is address of a cell containing the number of
+#! command line arguments that were passed to OKF.  Equivalent to 
+#! <code>argc</code> passed to <code>main</code> in C.
+
+: ARGC 0 #% ;
+
+ARGC DUP @ 1 - SWAP !
+
+#! ( -- a-addr )
+#! <code>a-addr</code> is the address of a vector of cells containing the
+#! address of each command line argument to OKF.
+
+: ARGV 1 #% ;
+
+ARGV DUP @ CELL+ SWAP !
+
+#! ( c-addr -- u )
+#! <code>u</code> is the length of the <code>NUL</code> terminated
+#! string starting at <code>c-addr</code>.
+
+#: STRLEN  89007D8B , AEC031FE , 294FFD75 , 007D89F7 , C3 C,
+
+#!   8B 7D 00  movl (%ebp), %edi
+#!   89 FE 31  movl %edi, %esi
+#!   C0        xorl %eax, %eax
+#!   AE        scasb
+#!   75 FD     jne -3
+#!   4F        decl %edi
+#!   29 F7     subl %esi, %edi
+#!   89 7D 00  movl %edi, (%ebp)
+#!   C3        ret
+
+#! ATOU
+#! ( c-addr u1 -- u2 n )
+#! Attempts to convert the string <code>c-addr</code> containing 
+#! <code>u1</code> characters into an unsigned integer <code>u2</code>
+#! according to the current <code>BASE</code>.
+#! <code>n</code> is zero if <code>u2</code> represents a number,
+#! otherwise it is greater than zero (it represents the number of
+#! characters left unconverted).
+
+#: ATOU  8B00458B , 75 C, 04 C, 3 #% @  E8 C, 9 #% @ SWAP - 5 - ,
+         89004D89 , C3047D ,
+
+#!   8B 45 00        movl (%ebp), %eax
+#!   8B 75 04        movl okf_cell_size(%ebp), %esi
+#!   E8 XX XX XX XX  call okf_atou
+#!   89 4D 00        movl %ecx, (%ebp)
+#!   89 7D 04        movl %edi, okf_cell_size(%ebp)
+#!   C3              ret

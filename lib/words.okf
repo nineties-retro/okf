@@ -1,0 +1,505 @@
+#! ANS FORTH CORE @
+#! a-addr -- x
+#! <code>x</code> is the value stored at <code>a-addr</code>.
+
+#: ->  8b00458b , 00458900 , c3 c,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   8b 00     movl (%eax), %eax
+#!   89 45 00  movl %eax, (%ebp)
+#!   c3        ret
+
+
+#! ANS FORTH CORE -
+#! n1|u1 n2|u2 -- n3|u3
+#! Subtract <code>n2|u2</code> from <code>n1|u1</code> giving the
+#! difference <code>n3|u3</code>
+
+#: -  2900458b , c5830445 , 04 c, c3 c,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   29 45 04  subl %eax, 4(%ebp)
+#!   83 c5 04  addl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE SWAP
+#! x2 x1 -- x1 x2
+
+#: <->  8700458b , 45890445 , 0000c300 ,
+
+#!   8b 45 00   movl (%ebp), %eax
+#!   87 45 04   xchg %eax, 4(%ebp)
+#!   89 45 00   movl %eax, (%ebp)
+#!   c3         ret
+
+
+#! ANS FORTH CORE '
+#! "<spaces>name" -- xt
+#! Skip leading space delimiters.  Parse <code>name</code> delimited by
+#! a space.  Find <code>name</code> and return <code>xt</code>, the
+#! execution token for <code>name</code>.  Aborts if <code>name</code>
+#! is not found.
+
+#: '  4 #% ->  e8 c, 6 #% -> <-> - 5 - ,  
+      4 #% ->  e8 c, 7 #% -> <-> - 5 - , 
+      c3 c,
+
+#! The above results in the following code being planted :-
+#!
+#!   e8 XX XX XX XX  call smf_p_in_word_exec
+#!   e8 YY YY YY YY  call smf_p_find_word_exec
+#!   c3              ret
+#!
+#! XXX.1: could tail call to smf_p_find_word_exec
+#! XXX.2: could call both via their vectors so that ' automatically takes
+#!        notice of any revectoring (most useful for a revectored find).
+
+#! ANS FORTH CORE +
+#! n1|u1 n2|u2 -- n3|u3
+#! Add <code>n2|u2</code> to <code>n1|u1</code> giving the 
+#! sum <code>n3|u3</code.
+
+#: +  0100458b , c5830445 , 04 c, c3 c,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   01 45 04  addl %eax, 4(%ebp)
+#!   83 c5 04  addl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE C!
+#! n c-addr --
+#! Truncate <code>n</code> to a character and store it at <code>c-addr</code>.
+
+#: <-c  8b04458b , 0388005d , c308c583 ,
+
+#!   8b 45 04  movl 4(%ebp), %eax
+#!   8b 5d 00  movl (%ebp), %ebx
+#!   88 03     movb %al, (%ebx)
+#!   83 c5 08  addl $8, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE EXT COMPILE,
+#! interpretation:
+#!   undefined.
+#! execution: xt --
+#!   Append the execution semantics of the definition represented by 
+#!   <code>xt</code> to the execution semantics of the current definition.
+
+#: #,  4 #% ->  e8 c, 8 #% -> <-> - 5 - ,  c3 c,
+
+#! The above results in the following code being planted :-
+#!
+#!   e8 XX XX XX XX  call smf_in_p_compile
+#!   c3              ret
+
+
+#! --
+#! The action that should be taken when the end of word is reached during
+#! compilation.
+
+#: #end c6 c, 05 c, 3 #% , 00 c, 47c307c6 , 89 c, 3d c, 4 #% , c3 c,
+
+#!   c6 05 XX XX XX XX 00  movb $0, smf_state
+#!   c6 07 c3              movb $c3, (%edi)
+#!   47                    incl %edi
+#!   89 3d YY YY YY YY     movl %edi, smf_dict_here
+#!   c3                    ret
+
+
+#! ANS FORTH CORE :
+#! XXX: describe
+
+#: [  ' #: #, c6 c, 05 c,
+      3 #% , 01 c,
+      8d c, 05 c, ' #end ,
+      83fc4589 , c304ed ,
+
+#!   e8 XX XX XX XX        call smf_p_create
+#!   c6 05 YY YY YY YY 01  movb $1, smf_state
+#!   8d 05 ZZ ZZ ZZ ZZ     leal #end, %eax
+#!   89 45 fc              movl %eax, -4(%ebp)
+#!   83 ed 04              subl $4, %ebp
+#!   c3                    ret
+
+
+#! xt --
+#! <code>]</code> is a generic end marker.
+#! <code>xt</code> is an execution token which implements the desired
+#! behaviour.  All <code>]</code> does is tail call <code>xt</code>.
+
+#: ]  8300558b , e2ff04c5 ,   0 5 #% -> 1 + <-c
+
+#! Since <code>immediate</code> has not been defined yet (and it cannot
+#! be until <code>]</code> has been unless it is added to OKF) need to
+#! to do the equivalent to mark <code>]</code> as immediate.
+
+#!   8b 55 00   movl (%ebp), %edx
+#!   83 c5 04   addl $4, %ebp
+#!   ff e2      jmp %edx
+
+
+
+#! ANS FORTH CORE =
+#! x1 x2 -- flag       
+#! <code>flag</code> is true if and only if <code>x1</code> is bit-for-bit
+#! the same as <code>x2</code>
+
+#: =  8b04c583 , 453bfc45 , 0045c700 , 00000000 , 0045940f , c3 c,
+
+#!   83 c5 04              addl $4, %ebp
+#!   8b 45 fc              movl -4(%ebp), %eax
+#!   3b 45 00              cmpl (%ebp), %eax
+#!   c7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   0f 94 45 00           sete (%ebp)
+#!   c3                    ret
+
+
+#! ANS FORTH CORE <
+#! n1 n2 -- flag
+#! <code>flag</code> is true if and only if <code>n1</code> is less then
+#! <code>n2</code>
+
+#: <  8b04c583 , 453bfc45 , 0045c700 , 00000000 , 00459f0f , c3 c,
+
+#! XXX: improve
+#!   83 c5 04              addl $4, %ebp
+#!   8b 45 fc              movl -4(%ebp), %eax
+#!   3b 45 00              cmpl (%ebp), %eax
+#!   c7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   0f 9f 45 00           setg (%ebp)
+#!   c3                    ret
+
+
+#! ANS FORTH CORE DROP
+#! x --    
+#! Remove <code>x</code> from the stack
+
+#: _0  c304c583 ,
+
+#!   83 c5 04  addl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE EXT NIP
+#! x1 x2 -- x2
+#! Remove <code>x1</code> from the stack
+
+#: _1  8900458b , ed830445 , 04 c, c3 c,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   89 45 04  movl %eax, 4(%ebp)
+#!   83 ed 04  subl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE DUP
+#! x -- x x     
+#! Duplicate <code>x</code>
+
+#: #0  8900458b , ed83fc45 , 04 c, c3 c,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   89 45 fc  movl %eax, -4(%ebp)
+#!   83 ed 04  subl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE OVER
+#! x1 x2 -- x1 x2 x1
+#! Place a copy of <code>x1</code> on the top of the stack.
+
+#: #1  8904458b , ed83fc45 , 04 c, c3 c,
+
+#!   8b 45 04  movl 4(%ebp), %eax
+#!   89 45 fc  movl %eax, -4(%ebp)
+#!   83 ed 04  subl $4, %ebp
+#!   c3        ret
+
+
+#! x1 x2 x3 -- x1 x2 x3 x1 
+#! Place a copy of <code>x1</code> on the top of the stack.
+
+#: #2  8908458b , ed83fc45 , 04 c, c3 c,
+
+#!   8b 45 08  movl 8(%ebp), %eax
+#!   89 45 fc  movl %eax, -4(%ebp)
+#!   83 ed 04  subl $4, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE C@
+#! c-addr -- n
+#! Fetch the character stored at <code>c-addr</code> and zero extend
+#! it to a cell and place it on the stack.
+
+#: c->  3100458b , 89008ac0 , 00c30045 ,
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   31 c0     xorl %eax, %eax
+#!   8a 00     movb (%eax), %al
+#!   89 45 00  movl %eax, (%ebp)
+#!   c3        ret
+
+
+#! ANS FORTH CORE !
+#! x a-addr --       
+#! Store <code>x</code> at <code>a-addr</code>.
+
+#: <-  8b04458b , 0389005d , c308c583 ,
+
+#!   8b 45 04  movl 4(%ebp), %eax
+#!   8b 5d 00  movl (%ebp), %ebx
+#!   89 03     movl %eax, (%ebx)
+#!   93 c5 08  addl $8, %ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE +!
+#! n|u a-addr --
+#! Add <code>n|u</code> to the single-cell number at <code>a-addr</code>
+
+#: <+-  8b04458b , 0303005d , c5830389 , 08 c, c3 c,
+
+#!   8b 45 04   movl 4(%ebp), %eax
+#!   8b 5d 00   movl (%ebp), %ebx
+#!   03 03      addl (%ebx), %eax
+#!   89 03      movl %eax, (%ebx)
+#!   83 c5 08   addl $8, %ebp
+#!   c3         ret
+
+
+#! ANS FORTH CORE CHAR+
+#! c-addr1 -- c-addr2
+#! Add the size in address units of a character to <code>c-addr1</code>
+#! giving <code>c-addr2</code>.
+
+[ char+ 1 + ]
+
+
+#! ANS FORTH CORE 0=
+#! x -- flag
+#! <code>flag</code> is true if and only if <code>x</code> is equal to zero.
+
+#: 0=  c700458b , 00000045 , c0850000 , 00940fc0 , c3 c,
+
+#!   8b 45 00              movl (%ebp), %eax
+#!   c7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   85 c0                 testl %eax, %eax
+#!   c0 0f 94 00           setz (%ebp)
+#!   c3                    ret
+
+
+#! u1 n2 c-addr1 -- c-addr2 u2
+#! Convert <code>u1</code> to a string according to the base <code>n2</code>.
+#! <code>c-addr1</code> is the address of one character past the end where
+#! the string should be placed.  Returns the address of the start of the
+#! converted string <code>c-addr2</code> and its length <code>u2</code>.
+
+#: u2$  8b005d8b , 458b044d , 4bde8908 , f1f7d231 ,
+        8030c280 , 037e39fa , 8811c280 , 75c08513 ,
+        085d89ea , 7589de29 , 04c58304 , c3 c,
+
+#!   movl (%ebp), %ebx
+#!   movl 4(%ebp), %ecx
+#!   movl 8(%ebp), %eax
+#!   movl %ebx, %esi
+#! loop:
+#!   decl %ebx
+#!   xorl %edx, %edx
+#!   divl %ecx, %eax
+#!   addb $'0', %dl
+#!   cmpb $'9', %dl
+#!   jle digit
+#!   addb $('A'-'0'), %dl
+#! digit:
+#!   movb %dl, (%ebx)
+#!   testl %eax, %eax
+#!   jne loop
+#!   movl %ebx, 8(%ebp)
+#!   subl %ebx, %esi
+#!   movl %esi, 4(%ebp)
+#!   addl $4, %ebp
+#!   ret
+
+#! str count fd -- nwritten
+#: type  8b005d8b , 4d8b0455 , 0004b808 , 80cd0000 ,
+         83084589 , c5 c, 08 c, c3 c,
+
+#! 8b 5d 00        movl (%ebp), %ebx
+#! 8b 55 04        movl 4(%ebp), %edx
+#! 8b 4d 08        movl 8(%ebp), %ecx
+#! b8 04 00 00 00  movl $4, %eax
+#! cd 80           int  $0x80
+#! 89 45 08        movl %eax, 8(%ebp)
+#! 83 c5 08        addl $8, %ebp
+#! c3              ret
+
+
+#! ANS FORTH CORE IMMEDIATE
+#! --                     
+#! Make the most recent definition an immediate word.
+
+[ immediate  0 5 #% -> char+ <-c ]
+
+
+#! ANS FORTH CORE POSTPONE
+#! interpretation:
+#!   undefined
+#! compilation: "<spaces>name" --
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   a space.  Find <code>name</code>.  Append the compilation semantics
+#!   of <code>name</code> to the current definition.  Aborts if 
+#!   <code>name</code> is not found.
+
+[ postpone  ' #, ] immediate
+
+
+#! ANS FORTH CORE CONSTANT
+#! interpretation:
+#!   Undefined.
+#! compilation: x "<spaces>name" --
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   a space.  Create a definition for <code>name</code> with the execution 
+#!   semantics defined below.
+#! execution: -- x
+#!   Place <code>x</code> on the stack.
+
+[ const #: postpone #$ c3 c, ]
+
+
+#! ANS FORTH CORE HERE
+#! -- addr
+#! <code>addr</code> is the data-space pointer.
+
+[ here  4 #% -> ]
+
+
+#! BASE is in a register in other implementations of SMF so instead of
+#! implementing an ANS FORTH CORE compatible BASE, SMF provides a
+#! getter and setter pair for BASE.
+
+#! -- n
+#! <code>n</code> is the current number conversion radix (2..36).
+
+[ base->  2 #% -> ]
+
+#! n --
+#! Set <code>n</code> to be the current number conversion radix (2..36).
+
+[ base<-  2 #% <- ]
+
+
+#! ANS FORTH CORE ALLOT
+#! n --
+#! If <code>c</code> is greater than zero, reserve <code>n</code>
+#! bytes of data space.  If <code>n</code> is less than zero, release
+#! <code>n</code> bytes of data space.
+
+[ allot  4 #% <+- ]
+
+
+#! -- c-addr
+#! Returns the address of one past the end of <code>pad</code>
+here 80 allot here const pad-end
+
+#! ANS FORTH CORE EXT PAD
+#! -- c-addr
+#! <code>c-addr</code> is the address of a transient region that can
+#! be used to hold data for intermediate processing.
+
+const pad
+
+#! ANS FORTH CORE .
+#! n --
+#! Display <code>n</code> in free field format
+
+[ #. base-> pad-end u2$ 1 type _0 ]
+
+
+#! c-addr -- 
+#! What ] does when it matches a [?
+#! Calculates the correct 8-bit offset and patches <code>c-addr</code> -1
+#! with it.
+
+#: (end-if) 2900458b , 88fb89c7 , c583ff58 , 0000c304 , 
+
+#!   8b 45 00  movl (%ebp), %eax
+#!   29 c7     subl %eax, %edi
+#!   89 fb     movl %edi, %ebx
+#!   88 58 ff  movb %bl, -1(%eax)
+#!   83 c5 04  addl $4, $ebp
+#!   c3        ret
+
+
+#! ANS FORTH CORE IF
+#! interpretation:
+#!   undefined
+#! compilation:  -- c-addr1 c-addr2
+#!   <code>c-addr1</code> is the address two bytes after the jz instruction.
+#!   To patch the instruction do the equivalent of 
+#!
+#!     offset <-> 1 - <-c
+#!
+#!   <code>c-addr2</code> is the address of the routine to call when
+#!   ] or | is reached.
+#!   
+#!   Append the run-time semantics given below to the current definition.
+#! run-time: x --
+#!   If all bits of <code>x</code> are zero, continue execution at the
+#!   patched address. XXX improve the explanation.
+
+#: [?  458b07c7 , 47c78300 , 8504c504 , 0847c6c0 , 0ac78374 , 8908ed83 ,
+       3d c, 4 #% , 8d047d89 , 05 c, ' (end-if) , c3004589 , immediate
+
+#! The first plants the following instructions :-
+#!
+#!   8B 45 00  movl (%ebp), %eax
+#!   83 C5 04  addl $4, %ebp
+#!   85 C0     testl %eax, %eax
+#!   74 XX     jz +XX
+#!
+#! after that it just sets up the dictionary and the addresses.
+#!
+#!   c7 07 8b 45 00 83  movl $0x8300458b, (%edi)
+#!   c7 47 04 c5 04 85  movl $0xC08504C5, 4(%edi)
+#!   c0 c6 47 08 74     movb $0x74, 8(%edi)
+#!   83 c7 0a           addl $0xa, %edi
+#!   83 ed 08           subl $0x8, %ebp
+#!   89 3d XX XX XX XX  movl %edi, smf_dict_here
+#!   89 7d 04           movl %edi, 4(%ebp)
+#!   8d 05 YY YY YY YY  leal (end-if), %eax
+#!   89 45 00           movl %eax, (%ebp)
+#!   c3                 ret
+
+
+#! ANS FORTH CORE ELSE
+#! compilation: c-addr1 c-addr2 -- c-addr3 c-addr2
+#!   Patches <code>c-addr1</code> - 1 and replaces it with 
+#!   <code>c-addr3</code> so that it can be patched by (end-if).
+#!   Note that 8-bit branches are used so make sure that <code>|</code>
+#!   is used no more than 128 bytes away from <code>c-addr1</code>.
+#! run-time: --
+#!   XXX: explain
+
+#: |  83eb07c6 , 3d8902c7 , 4 #% , 89045d8b , df29047d , 
+      4388f889 , c3ff ,  immediate
+
+#!   c6 07 eb           movb $0xeb, (%edi)
+#!   83 c7 02           addl $02, %edi
+#!   89 3d XX XX XX XX  movl %edi, smf_dict_here
+#!   8b 5d 04           movl 4(%ebp), %ebx
+#!   89 7d 04           movl %edi, 4(%ebp)
+#!   29 df              subl %ebx, %edi
+#!   89 f8 88 43 ff     movb %al, -1(%ebx)
+#!   c3                 ret
+
+# [ foo 10 < [? 42 | 96 ] ]
+# 
+# [ nfib #0 2 < [? _0 1 | #0 1 - nfib <-> 2 - nfib + 1 + ] ]
+# 
+# 0a base<-
+# 
+# 10 nfib #.

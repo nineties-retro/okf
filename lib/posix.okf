@@ -1,0 +1,436 @@
+#! POSIX binding for OKF.
+#!
+#! Does not contain a complete binding.  Instead it contains bindings
+#! for selected system calls.
+#!
+#! The binding is not consistent in its treatment of argument order.
+#! I've taken the liberty of altering the order to suit myself.
+
+
+#! long alarm(long seconds)
+#! n1 -- n2
+#! Arrange for SIGALARM to be delivered to the process after
+#! <code>n1</code> seconds.  If <code>n1</code> is zero, no
+#! new alarm is scheduled.
+#! <code>POSIX-ALARM</code> returns the number of seconds remaining
+#! until any previously scheduled alarm was due to be delivered, or
+#! zero if there was no previously scheduled alarm.
+#! Note that POSIX-ALARM and POSIX-SETITIMER share the same timer;
+#! calls to one will interfere with use of the other.
+
+#: POSIX-ALARM  B8005D8B , 0000001B , 458980CD , 00 C, C3 C,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   B8 1B 00 00 00  movl $0x1B, %eax
+#!   CD 80           int  $0x80
+#!   89 45 00        movl %eax, (%ebp)
+#!   C3              ret
+
+
+#! int close(int fd)
+#! n1 -- n2
+#! Closes the file descriptor <code>n1</code>.  <code>n2</code>
+#! is zero if the operation succeeds otherwise it is non-zero.
+
+#: POSIX-CLOSE  B8005D8B , 00000006 , 458980CD , 00 C, C3 C,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   B8 06 00 00 00  movl $6, %eax
+#!   CD 80           int  $0x80
+#!   89 45 00        movl %eax, (%ebp)
+#!   C3              ret
+
+
+#! int dup(long oldfd)
+#! n1 -- n2
+#! <code>POSIX-DUP</code> creates a copy of the file descriptor <code>n1</code>
+#! and returns it as <code>n2</code>.  If the descriptor could not be
+#! duplicated then <code>n2</code> is a negative value indicating the
+#! nature of the error.
+
+#: POSIX-DUP  B8005D8B , 0000001B , 458980CD , 00 C, C3 C,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   B8 1B 00 00 00  movl $0x1B, %eax
+#!   CD 80           int  $0x80
+#!   89 45 00        movl %eax, (%ebp)
+#!   C3              ret
+
+
+#! pid_t fork(void)
+#! ( -- pid )
+#! Fork the current process.  On success, the PID of the child process
+#! is returned in the parent's thread of execution, and a 0 is returned
+#! in the child's thread of execution.  On failure, a negative number
+#! will be returned in the parent's context indicating the type of
+#! failure, no child process will be created.
+
+#: POSIX-FORK  000002B8 , 8980CD00 , ED83FC45 , 04 C, C3 C,
+
+#!   B8 02 00 00 00  movl $0x2, %eax
+#!   CD 80           int  $0x80
+#!   89 45 FC        movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04        subl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int gettimeofday(struct timeval *tv, struct timezone *tz)
+#! a-addr1 a-addr2 -- n
+#! <code>a-addr1</code> is the address of two cells where the 
+#! <code>struct timeval</code> is to be written.  If 0 is passed
+#! then no value will be written.
+#! <code>a-addr2</code> is the address of two cells where the
+#! <code>struct timezone</code> is to be written.  If 0 is passed
+#! then no value will be written.
+#! <code>n</code> is 0 if <code>gettimeofday</code> is successful.
+
+#: POSIX-GETTIMEOFDAY  8B005D8B , 4EB8044D , CD000000 , 04458980 , C304C583 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   B8 4E 00 00 00  movl $0x4E, %eax
+#!   CD 80           int  $0x80
+#!   89 45 04        movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04        addl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int kill(pid_t pid, int sig)
+#! u n1 -- n2
+#! <code>POSIX-KILL</code> can be used to send a signal to any
+#! process group or proces.
+#!
+#! If <code>n1</code> is positive, the signal <code>u</code> is
+#! send to the process with the process id of <code>n1</code>.
+#! <code>n2</code> is 0 on success, or a non-zero value on failure.
+#!
+#! If <code>n1</code> is less than -1, then the signal <code>u</code>
+#! is sent to every process in the process group <code>-n1</code>.
+#! <code>n2</code> is the number of processes the signal was sent to
+#! or a negative value on failure.
+
+#: POSIX-KILL  8B005D8B , 25B8044D , CD000000 , 04458980 , C304C583 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   B8 25 00 00 00  movl $0x25, %eax
+#!   CD 80           int  $0x80
+#!   89 45 04        movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04        addl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int lseek(int fd, off_t offset, int whence)
+#! n1 u1 n2 -- n3
+#! Reposition the offset of the file descriptor <code>n2</code> to
+#! the offset <code>u1</code> according to <code>n1</code>.  If 
+#! <code>n1</code> is 0, the seek is from the beginning of the file.
+#! If <code>n1</code> is 1, the seek is from the current position of
+#! the file.  If <code>n2</code> is 2, the seek is from the end of
+#! the file.  If successful, <code>n3</code> is the offset measured
+#! from the beginning of the file.  If unsuccessful, <code>n3</code>
+#! is negative and represents the error.
+#! UNTESTED
+
+#: POSIX-LSEEK  8B005D8B , 558B044D , 0013B808 ,
+                80CD0000 , 83084589 , 00C308C5 ,
+
+#! 8b 5d 00        movl (%ebp), %ebx
+#! 8b 4d 04        movl okf_cell_size(%ebp), %ecx
+#! 8b 55 08        movl okf_double_cell_size(%ebp), %edx
+#! b8 13 00 00 00  movl $0x13, %eax
+#! cd 80           int  $0x80
+#! 89 45 08        movl %eax, okf_double_cell_size(%ebp)
+#! 83 c5 08        addl $okf_cell_size, %ebp
+#! c3              ret
+
+
+#! void * mmap(void *start, size_t length, int prot, int flags,
+#!             int fd, off_t offset);
+#! u1 n1 u2 u3 u4 a-addr1 -- a-addr2 | n2
+#! Map <code>u4</code> bytes starting at <code>u1</code> from the file
+#! (or other object) specified by the file descriptor <code>n1</code>
+#! into memory, preferably at address <code>a-addr1</code>.  
+#! <code>a-addr2</code> is the address where the object is mapped.
+#! <code>u3</code> can be any combination of
+#! <code>POSIX-PROT_EXEC</code>, <code>POSIX-PROT_READ</code> and
+#! <code>POSIX-PROT_WRITE</code>.
+#! <code>u2</code> can be <code>POSIX-MAP_FIXED</code>,
+#! <code>POSIX-MAP_SHARED</code>, <code>POSIX-MAP_PRIVATE</code>.
+#! If the object could not be mapped, then <code>n2</code> is
+#! a negative number which indicates what the cause of the failure was.
+
+#: POSIX-MMAP  458BE289 , 105D8B14 , 500C4D8B , 458B5153 ,
+               045D8B08 , 50004D8B , 5AB85153 , 89000000 ,
+               8980CDE3 , 144589D4 , C314C583 ,
+
+#! The kernel I'm using only supports system calls with up to four arguments
+#! in registers.  Any more than that and the whole lot has to be passed via
+#! an in memory structure.  
+#! See /usr/src/linux/arch/i386/kernel/sys_i386.c#old_mmap for more
+#! information.  Performance is not an issue here since a syscall is so
+#! slow anyway, so use pushl to save some space.
+
+#!   89 E2           movl %esp, %edx
+#!   8B 45 14        movl (5*okf_cell_size)(%ebp), %eax
+#!   8B 5D 10        movl (4*okf_cell_size)(%ebp), %ebx
+#!   8B 4D 0C        movl (3*okf_cell_size)(%ebp), %ecx
+#!   50              pushl %eax
+#!   53              pushl %ebx
+#!   51              pushl %ecx
+#!   8B 45 08        movl (2*okf_cell_size)(%ebp), %eax
+#!   8B 5D 04        movl (1*okf_cell_size)(%ebp), %ebx
+#!   8B 4D 00        movl (0*okf_cell_size)(%ebp), %ecx
+#!   50              pushl %eax
+#!   53              pushl %ebx
+#!   51              pushl %ecx
+#!   B8 5A 00 00 00  movl $0x5A, %eax
+#!   89 E3           movl %esp, %ebx
+#!   CD 80           int $0x80
+#!   89 D4           movl %edx, %esp
+#!   89 45 14        movl %eax, (5*okf_cell_size)(%ebp)
+#!   83 C5 14        addl $(5*okf_cell_size), %ebp
+#!   C3              ret
+
+
+
+#! int mprotect(caddr_t addr, size_t len, int prot)
+#! ( u1 a-addr u2 -- n )
+#! Controls how a section of memory starting at <code>a-addr</code> and
+#! extending for <code>u2</code> bytes may be accessed.
+#! <code>u1</code> can be any combination of <code>POSIX-PROT_NONE</code>,
+#! <code>POSIX-PROT_WRITE</code>, <code>POSIX-PROT_READ</code> and
+#! <code>POSIX-PROT_EXEC</code>.
+#! Returns 0 on success, a non-zero value on failure.
+#! UNTESTED
+
+#: POSIX-MPROTECT  8B004D8B , 558B045D , 007DB808 , CD000000 ,
+                   08458980 , C309C583 ,
+
+#!   8B 4D 00        movl (%ebp), %ecx
+#!   8B 5D 04        movl okf_cell_size(%ebp), %ebx
+#!   8B 55 08        movl okf_double_cell_size(%ebp), %edx
+#!   B8 7D 00 00 00  movl $0x7D, %eax
+#!   CD 80           int  $0x80
+#!   89 45 08        movl %eax, okf_double_cell_size(%ebp)
+#!   83 C5 08        addl $okf_double_cell_size, %ebp
+#!   C3              ret
+
+
+#! int munmap(void * start, size_t length)
+#! ( a-addr u -- n )
+#! Delete the mappings for the specified address range.  Any further
+#! references to an address within the range will generate an invalid
+#! memory reference.
+#! Returns 0 on success, a non-zero value on failure.
+#! UNTESTED
+
+#: POSIX-MUNMAP  8B004D8B , 5BB8045D , CD000000 , 0458980 , C304C583 ,
+
+#!   8B 4D 00        movl (%ebp), %ecx
+#!   8B 5D 04        movl okf_cell_size(%ebp), %ebx
+#!   B8 5B 00 00 00  movl $0x5B, %eax
+#!   CD 80           int  $0x80
+#!   89 45 04        movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04        addl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int nanosleep(const struct timespec *req, struct timespec *rem)
+#! a-addr1 a-addr2 -- n
+#! <code>POSIX-NANOSLEEP</code> delays the execution of the program
+#! for at least the time specified by the time specification at 
+#! <code>a-addr2</code>.  It can return earlier if a signal is
+#! delivered to the process.  In this case, it <code>n</code> is -1
+#! and the remaining time is written into the time specification at
+#! <code>a-addr1</code> unless it is 0.  If it returns normally, 
+#! then <code>n</code> is 0.
+
+#: POSIX-NANOSLEEP  8B005D8B , A2B8044D , CD000000 , 04458980 , C304C583 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   B8 A2 00 00 00  movl $0xA2, %eax
+#!   CD 80           int  $0x80
+#!   89 45 04        movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04        addl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int open(char const * file_name, int flags, int mode)
+#! n1 n2 c-addr -- n3
+#! <code>c-addr</code> is a NUL terminated string.
+#! If <code>n3</code> is greater than or equal to zero then it is a 
+#! file descriptor.  If <code>n3</code> is less than zero, then it
+#! is an error code indicating why <code>open</code> did not succeed.
+
+#: POSIX-OPEN  8B005D8B , 558B044D , 0005B808 , 
+               80CD0000 , 83084589 , 00C308C5 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl 4(%ebp), %ecx
+#!   8B 55 08        movl 8(%ebp), %edx
+#!   B8 05 00 00 00  movl $5, %eax
+#!   CD 80           int  $0x80
+#!   89 45 08        movl %eax, 8(%ebp)
+#!   83 C5 08        addl $8, %ebp
+#!   C3              ret
+
+
+#! int pause(void)
+#! ( -- n )
+#! <code>POSIX-PAUSE</code> makes the calling process go to sleep until
+#! a signal is received.  <code>n</code> is always a negative value.
+
+#: POSIX-PAUSE  00001DB8 , 8980CD00 , ED83FC45 , 04 C, C3 C,
+
+#!   B8 1D 00 00 00  movl $0x1D, %eax
+#!   CD 80           int  $0x80
+#!   89 45 FC        movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04        subl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! int read(int fd, void *buf, size_t count)
+#! c-addr u n1 -- n2
+#! Read in <code>u</code> bytes into <code>c-addr</code> from the
+#! POSIX file descriptor <code>n1</code>.  <code>n2</code> is the
+#! number of characters that were read in.
+
+#: POSIX-READ  8B005D8B , 4D8B0455 , 0003B808 ,
+               80CD0000 , 83084589 , 00C308C5 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 55 04        movl okf_cell_size(%ebp), %edx
+#!   8B 4D 08        movl okf_double_cell_size(%ebp), %ecx
+#!   B8 03 00 00 00  movl $3, %eax
+#!   CD 80           int  $0x80
+#!   89 45 08        movl %eax, 8(%ebp)
+#!   83 C5 08        addl $8, %ebp
+#!   C3              ret
+
+
+#! int sigaction(int signum, const struct sigaction *act, 
+#!               const struct sigaction *oldact)
+#! a-addr1 a-addr2 u -- n
+#! Replace the action to be taken when the signal <code>u</code> occurs
+#! with <code>a-addr2</code>.  If <code>a-addr1</code> is not 0,
+#! the previous action is saved in it.
+#! Returns 0 on success and a non-zero value on failure.
+
+#: POSIX-SIGACTION  8B005D8B , 558B044D , 0043B808 ,
+                    80CD0000 , 83084589 , 00C308C5 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   8B 55 08        movl okf_double_cell_size(%ebp), %edx
+#!   B8 43 00 00 00  movl $0x43, %eax
+#!   CD 80           int  $0x80
+#!   89 45 08        movl %eax, okf_double_cell_size(%ebp)
+#!   83 C5 08        addl $okf_double_cell_size, %ebp
+#!   C3              ret
+
+
+#! int write(int fd, void *buff, size_t nbytes)
+#! c-addr u n1 -- n2
+#! Write out the string represented by <code>c-addr</code> <code>u</code> 
+#! to the POSIX file descriptor <code>n1</code>.  <code>n2</code> is the
+#! number of characters that were written.
+
+#: POSIX-WRITE  8B005D8B , 4D8B0455 , 0004B808 ,
+                80CD0000 , 83084589 , 00C308C5 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 55 04        movl okf_cell_size(%ebp), %edx
+#!   8B 4D 08        movl okf_double_cell_size(%ebp), %ecx
+#!   B8 04 00 00 00  movl $4, %eax
+#!   CD 80           int  $0x80
+#!   89 45 08        movl %eax, okf_double_cell_size(%ebp)
+#!   83 C5 08        addl $okf_double_cell_size, %ebp
+#!   C3              ret
+
+
+#! /usr/include/asm/fcntl.h
+
+  0 CONSTANT POSIX-O_RDONLY
+  1 CONSTANT POSIX-O_WRONLY
+  2 CONSTANT POSIX-O_RDWR
+ 40 CONSTANT POSIX-O_CREAT
+ 80 CONSTANT POSIX-O_EXCL
+100 CONSTANT POSIX-O_NOCTTY
+200 CONSTANT POSIX-O_TRUNC
+400 CONSTANT POSIX-O_APPEND
+800 CONSTANT POSIX-O_NONBLOCK
+
+
+#! /usr/include/sys/mman.h
+
+ 0 CONSTANT POSIX-PROT_NONE
+ 1 CONSTANT POSIX-PROT_READ
+ 2 CONSTANT POSIX-PROT_WRITE
+ 4 CONSTANT POSIX-PROT_EXEC
+
+ 1 CONSTANT POSIX-MAP_SHARED
+ 2 CONSTANT POSIX-MAP_PRIVATE
+10 CONSTANT POSIX-MAP_FIXED
+
+
+#! /usr/include/signal.h
+
+ 1 CONSTANT POSIX-SIGHUP
+ 2 CONSTANT POSIX-SIGINT
+ 3 CONSTANT POSIX-SIGQUIT
+ 4 CONSTANT POSIX-SIGILL
+ 5 CONSTANT POSIX-SIGTRAP
+ 6 CONSTANT POSIX-SIGABRT
+ 7 CONSTANT POSIX-SIGIOT
+ 8 CONSTANT POSIX-SIGBUS
+ 9 CONSTANT POSIX-SIGFPE
+0A CONSTANT POSIX-SIGKILL
+0B CONSTANT POSIX-SIGUSR1
+0C CONSTANT POSIX-SIGSEGV
+0D CONSTANT POSIX-SIGUSR2
+0E CONSTANT POSIX-SIGALRM
+0F CONSTANT POSIX-SIGTERM
+10 CONSTANT POSIX-SIGSTKFLT
+11 CONSTANT POSIX-SIGCHLD
+12 CONSTANT POSIX-SIGCONT
+13 CONSTANT POSIX-SIGSTOP
+14 CONSTANT POSIX-SIGSTP
+15 CONSTANT POSIX-SIGTTIN
+16 CONSTANT POSIX-SIGTTOU
+17 CONSTANT POSIX-SIGXCPU
+18 CONSTANT POSIX-SIGFSZ
+19 CONSTANT POSIX-SIGVTALRM
+1A CONSTANT POSIX-SIGWINCH
+1B CONSTANT POSIX-SIGIO
+1C CONSTANT POSIX-SIGPOLL
+
+00000001 CONSTANT POSIX-SA_NOCLDSTOP
+04000000 CONSTANT POSIX-SA_SHIRQ
+08000000 CONSTANT POSIX-SA_STACK
+10000000 CONSTANT POSIX-SA_RESTART
+20000000 CONSTANT POSIX-SA_INTERRUPT
+40000000 CONSTANT POSIX-SA_NOMASK
+40000000 CONSTANT POSIX-SA_NODEFER
+80000000 CONSTANT POSIX-SA_ONESHOT
+80000000 CONSTANT POSIX-SA_RESETHAND
+
+       0 CONSTANT POSIX-SIG_DFL
+       1 CONSTANT POSIX-SIG_IGN
+FFFFFFFF CONSTANT POSIX-SIG_ERR
+
+0 CELLS CONSTANT POSIX-SIGACTION-SA-HANDLER
+1 CELLS CONSTANT POSIX-SIGACTION-SA-MASK
+2 CELLS CONSTANT POSIX-SIGACTION-SA-FLAGS
+3 CELLS CONSTANT POSIX-SIGACTION-SA-RESTORER
+
+4 CELLS CONSTANT POSIX-SIGACTION-SIZE
+
+
+#! /usr/include/time.h
+
+0 CELLS CONSTANT POSIX-TIMESPEC-TV_SEC
+1 CELLS CONSTANT POSIX-TIMESPEC-TV_NSEC
+
+2 CELLS CONSTANT POSIX-TIMESPEC-SIZE

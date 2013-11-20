@@ -1,0 +1,63 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/okf.okf
+#< lib/posix.okf
+
+DECIMAL
+
+: DISPLAY-TIME DUP @ . SPACE CELL+ @ . CR ;
+
+\ time[a-addr] -- a-addr
+: TIME-MINS  CELL+ ;
+
+\ time[a-addr] -- a-addr
+: TIME-HOURS ;
+
+\ t1[a-addr] t2[a-addr] -- t1.mins[u] t2.mins[u]
+: TIME-PAIR-MINS  TIME-MINS @ SWAP TIME-MINS @ SWAP ;
+
+\ t1[a-addr] t2[a-addr] -- t1[a-addr] t2[a-addr] t1.hours[u] t2.hours[u]
+: TIME-PAIR-HOURS  OVER @ OVER @ ;
+
+\ mins[u] hours[u] t1[a-addr] --
+: TIME!   DUP >R TIME-HOURS  !  R> TIME-MINS  ! ;
+
+\ t1[a-addr] t2[a-addr] -- mins[u] hours[u] 
+: TIME-  TIME-PAIR-HOURS - >R  TIME-PAIR-MINS - 
+         DUP 0< IF 60 + R> 1 - ELSE R> THEN ;
+
+\ t1[a-addr] t2[a-addr] -- mins[u] hours[u] 
+: TIME+  TIME-PAIR-HOURS + >R  TIME-PAIR-MINS +
+         DUP 60 < IF R> ELSE 60 - R> 1 + THEN ;
+
+\ t1[a-addr] --
+: ZERO-TIME  0 OVER TIME-HOURS !  0 SWAP TIME-MINS ! ;
+
+CREATE TIME-TOTAL 2 CELLS ALLOT
+CREATE TIME-TEMP  2 CELLS ALLOT
+
+TIME-TOTAL ZERO-TIME
+
+#: TIMES 18 , 08 , 18 , 21 ,
+         18 , 43 , 19 , 17 ,
+         0  , 0  , 0  , 0  ,
+
+: ADD-TIME  DUP 8 + SWAP TIME- TIME-TEMP TIME!
+            TIME-TOTAL TIME-TEMP TIME+ TIME-TOTAL TIME! ;
+
+: SOME-LEFT? DUP TIME-HOURS @ OVER TIME-MINS @ + ;
+
+: TOTAL-DIFFS  SOME-LEFT? IF DUP ADD-TIME 16 + TOTAL-DIFFS
+                     ELSE DROP 
+                     THEN ;
+
+: SUM TIME-TOTAL TIME+ TIME-TOTAL TIME! TIME-TOTAL DISPLAY-TIME ;
+
+: TOTAL-SUMS  SOME-LEFT? IF   DUP SUM 8 + TOTAL-SUMS
+                         ELSE DROP 
+                         THEN ;
+
+
+' TIMES TOTAL-DIFFS
+\ ' TIMES TOTAL-SUMS
+TIME-TOTAL DISPLAY-TIME 

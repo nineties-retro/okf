@@ -1,0 +1,12 @@
+#! okf
+
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/ans-floating.okf
+#< lib/ans-floating-ext.okf
+#< lib/okf.okf
+#< lib/posix.okf
+
+DECIMAL
+
+0 #{

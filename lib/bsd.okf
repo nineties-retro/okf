@@ -1,0 +1,49 @@
+#! int getrusage(int who, struct rusage *usage)
+#! a-addr u -- n
+#! <code>BSD-GETRUSAGE</code> returns the current resource usages.
+#! If <code>u</code> is <code>BSD-RUSAGE_SELF</code> the usage is for
+#! the current process.  If <code>u</code> is BSD-RUSAGE_CHILDREN</code>
+#! then it covers the current processes children.  The usage information
+#! is written to the memory starting at <code>a-addr</code> and which
+#! is at least <code>BSD-RUSAGE-SIZE</code> long.
+#! <code>n</code> is 0 on success, non-zero on failure.
+
+#: BSD-GETRUSAGE  8B005D8B , 4DB8044D , CD000000 , 04458980 , C304C583 ,
+
+#!   8B 5D 00        movl (%ebp), %ebx
+#!   8B 4D 04        movl okf_cell_size(%ebp), %ecx
+#!   B8 4D 00 00 00  movl $0x4D, %eax
+#!   CD 80           int  $0x80
+#!   89 45 04        movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04        addl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+#! /usr/include/linux/resource.h
+
+       0 CONSTANT BSD-RUSAGE_SELF
+FFFFFFFF CONSTANT BSD-RUSAGE_CHILDREN
+
+BASE DUP @
+DECIMAL
+
+00 CELLS CONSTANT BSD-RUSAGE-RU_UTIME    \ user time used
+02 CELLS CONSTANT BSD-RUSAGE-RU_STIME    \ system time used
+04 CELLS CONSTANT BSD-RUSAGE-RU_MAXRSS   \ maximum resident set size
+05 CELLS CONSTANT BSD-RUSAGE-RU_IXRSS    \ integral shared memory size
+06 CELLS CONSTANT BSD-RUSAGE-RU_IDRSS    \ integral unshared data size
+07 CELLS CONSTANT BSD-RUSAGE-RU_ISRSS    \ integral unshared stack size
+08 CELLS CONSTANT BSD-RUSAGE-RU_MINFLT   \ page reclaims
+09 CELLS CONSTANT BSD-RUSAGE-RU_MAJFLT   \ page faults
+10 CELLS CONSTANT BSD-RUSAGE-RU_NSWAP    \ swaps
+11 CELLS CONSTANT BSD-RUSAGE-RU_INBLOCK  \ block input operations
+12 CELLS CONSTANT BSD-RUSAGE-RU_OUBLOCK  \ block output operations
+13 CELLS CONSTANT BSD-RUSAGE-RU_MSGSND   \ messages sent
+14 CELLS CONSTANT BSD-RUSAGE-RU_MSGRCV   \ messages received
+15 CELLS CONSTANT BSD-RUSAGE-RU_NSIGNALS \ signals received
+16 CELLS CONSTANT BSD-RUSAGE-RU_NVCSW    \ voluntary context switches
+17 CELLS CONSTANT BSD-RUSAGE-RU_NINVCSW  \ involuntary context switches
+
+18 CELLS CONSTANT BSD-RUSAGE-SIZE
+
+SWAP !

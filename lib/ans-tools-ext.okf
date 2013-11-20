@@ -1,0 +1,9 @@
+#! ANS FORTH TOOLS EXT BYE
+#! ( -- )
+#! Return control to the host operating system, if any.
+
+#: BYE  000001B8 , CDDB3100 , 80 C,
+
+#!   B8 00 00 00 01  movl $1, %eax
+#!   31 DB           xorl %ebx, %ebx
+#!   CD 80           int  $0x80

@@ -1,0 +1,76 @@
+#! A simple implementation of cat(1) in OKF
+#! cat [ file ... ]
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/okf.okf
+#< lib/posix.okf
+
+DECIMAL
+
+#! ( -- c-addr u )
+: SCRIPT-NAME  ARGV @ @ DUP STRLEN ;
+
+1024 CONSTANT BUFFER-SIZE
+HERE BUFFER-SIZE ALLOT CONSTANT BUFFER
+
+\ : ? DUP . CR ;
+
+#! ( n1 -- n2 )
+#! Read <code>BUFFER-SIZE</code> characters into <code>BUFFER</code>
+#! from the file-descriptor <code>n1</code>.  <code>n2</code> is the
+#! number of characters read if positive, otherwise it is the error
+#! code.
+
+: READ  >R BUFFER BUFFER-SIZE R> POSIX-READ ;
+
+
+#! ( n -- )
+#! Write <code>n</code> bytes from <code>BUFFER</code> to the standard
+#! output.  XXX: The return code is ignored.  It should not be!
+
+: WRITE  BUFFER SWAP 1 POSIX-WRITE DROP ;
+
+
+#! ( n -- )
+#! Close the file descriptor <code>n</code>.  XXX: the return code
+#! is ignored -- it should not be.
+
+: CLOSE POSIX-CLOSE DROP ;
+
+
+#! ( n -- )
+#! Writes the file whose file descriptor is <code>n</code> to the standard
+#! output.
+
+: CAT-FD  DUP READ DUP 0> IF WRITE ITERATE ELSE DROP DROP THEN ;
+
+
+#! ( c-addr - n )
+: OPEN  >R 0 POSIX-O_RDONLY R> POSIX-OPEN ;
+
+
+#! ( c-addr -- )
+: REPORT-ERROR  SCRIPT-NAME TYPE SPACE ." could not open " DUP STRLEN TYPE CR ;
+
+
+#! ( c-addr -- )
+#! Writes the file whose name is represented by the <code>NUL</code>
+#! terminated string at <code>c-addr</code> to the standard output.
+
+: CAT-FILE  DUP OPEN DUP 0>
+            IF NIP DUP CAT-FD CLOSE 
+            ELSE DROP REPORT-ERROR THEN ;
+
+
+#! ( c-addr u -- )
+: DO-ALL  DUP IF   1- SWAP DUP @ CAT-FILE CELL+ SWAP ITERATE
+              ELSE DROP DROP
+              THEN ;
+
+#! ( -- c-addr u )
+#! Skip over the script-name to return the address of the first
+#! argument and the adjusted argument count.
+
+: SKIP-SCRIPT-NAME  ARGV @ CELL+ ARGC @ 1- ;
+
+SKIP-SCRIPT-NAME DO-ALL

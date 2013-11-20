@@ -1,0 +1,63 @@
+#! ANS FORTH FLOATING D>F
+#! ( d -- ) ( F: -- r)
+#! <code>r</code> is the floating-point equivalent of <code>d</code>.
+#! XXX: describe what happens if <code>d</code> cannot be represented.
+
+#: D>F  830045DF , C309C5 ,
+
+#!   df 45 00  fild (%ebp)
+#!   83 c5 08  addl $okf_double_cell_size, %ebp
+#!   c3        ret
+
+
+
+#! ANS FORTH FLOATING F!
+#! ( f-addr -- ) ( F: r -- )
+#! Store <code>r</code> at <code>f-addr</code>.
+
+
+
+#! ANS FORTH FLOATING F*
+#! ( F: r1 r2 -- r3 )
+#! Multiply <code>r1</code> by <code>r2</code> giving <code>r3</code>.
+
+#: F*  C3C9DE ,
+
+#!   DE C9  fmulp
+#!   C3     ret
+
+
+#! ANS FORTH FLOATING F+
+#! ( F: r1 r2 -- r3 )
+#! Add <code>r1</code> to <code>r2</code> giving the sum <code>r3</code>.
+
+#: F+  C3C1DE ,
+
+#!   DE C1  faddp
+#!   C3     ret
+
+
+#! ANS FORTH FLOATING F-
+#! ( F: r1 r2 -- r3 )
+#! Subtract <code>r2</code> from <code>r1</code> giving the difference
+#! <code>r3</code>.
+
+#: F-  C3E1DE ,
+
+#!   DE E1  fsubrp
+#!   C3     ret
+
+
+
+#! ANS FORTH FLOATING F>D
+#! ( -- d) ( F: r -- )
+#! <code>d</code> is the double-cell signed-integer equivalent of the
+#! integer portion of <code>r</code>.  The fractional portion of 
+#! <code>r</code> is discarded.  XXX describe what happens if the
+#! <code>r</code> cannot be represented.
+
+#: F>D  83F855DF , C308ED ,
+
+#!   DF 55 F8  fist -okf_double_cell_size(%ebp)
+#!   83 ED 08  subl $okf_double_cell_size, %ebp
+#!   C3        ret

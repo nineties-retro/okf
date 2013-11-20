@@ -1,0 +1,8 @@
+#! ANS FORTH FLOATING FABS
+#! ( F: r1 -- r2 )
+#! <code>r2</code> is the abolute value of <code>r1</code>.
+
+#: FABS  C3E1D9 ,
+
+#!   D9 E1  fabs
+#!   C3     ret

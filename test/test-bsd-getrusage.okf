@@ -1,0 +1,44 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/bsd.okf
+
+\ Test out BSD-RUSAGE.
+\ Does so by calling 29 NFIB and then getting the resource usage information.
+\ For example :-
+\
+\  $ ./okf test-bsd-getrusage.okf
+\  utime    4s 320000us
+\  stime    0s 0us
+\  shared   0
+\  data     0
+\  stack    0
+\  reclaims 8
+\  faults   3
+\  swaps    0
+\  $ 
+
+DECIMAL
+
+CREATE USAGE BSD-RUSAGE-SIZE CELLS ALLOT
+
+: GETUSAGE ( -- ) USAGE BSD-RUSAGE_SELF BSD-GETRUSAGE
+                  ABORT" could not get usage" ;
+
+: DISPLAY-TIME ( a-addr -- )  DUP @ . ." s "  CELL+ @ . ." us" ;
+
+: DISPLAY-LONG ( u -- ) USAGE + @ . CR ;
+: UTIME    ." utime    " USAGE BSD-RUSAGE-RU_UTIME  + DISPLAY-TIME CR ;
+: STIME    ." stime    " USAGE BSD-RUSAGE-RU_STIME  + DISPLAY-TIME CR ;
+: SHARED   ." shared   " BSD-RUSAGE-RU_IXRSS  DISPLAY-LONG ;
+: DATA     ." data     " BSD-RUSAGE-RU_IDRSS  DISPLAY-LONG ;
+: STACK    ." stack    " BSD-RUSAGE-RU_ISRSS  DISPLAY-LONG ;
+: RECLAIMS ." reclaims " BSD-RUSAGE-RU_MINFLT DISPLAY-LONG ;
+: FAULTS   ." faults   " BSD-RUSAGE-RU_MAJFLT DISPLAY-LONG ;
+: SWAPS    ." swaps    " BSD-RUSAGE-RU_NSWAP  DISPLAY-LONG ;
+
+: DISPLAYUSAGE ( -- )  UTIME STIME SHARED DATA STACK RECLAIMS FAULTS SWAPS ; 
+: NFIB  DUP 2 < IF DROP 1 ELSE DUP 1 - RECURSE SWAP 2 - RECURSE + 1 + THEN ;
+29 NFIB DROP
+
+GETUSAGE
+DISPLAYUSAGE

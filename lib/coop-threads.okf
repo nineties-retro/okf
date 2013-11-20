@@ -1,0 +1,145 @@
+\ A minimal cooperative threads implementation.
+\ So minimal it is unlikely you'd want to use it directly.
+\ Instead it is suggested you create some wrapper words that
+\ hide some of the low level detail.
+
+
+\ A handle on the currently executing thread.
+\ Users are not expected to manipulate this directly.
+
+VARIABLE THREAD-CURRENT
+
+
+\ The size of a THREAD in addressable units.
+
+7 CELLS CONSTANT THREAD-SIZE
+
+\ A THREAD contains the following :-
+\
+\  0  PREV - previous thread in the chain
+\  4  NEXT - next thread in the chain.
+\  8  RETURN-STACK 
+\ 12  DATA-STACK 
+\ 16  BASE
+\ 20  INPUT
+\ 24  EIP
+
+
+\ The magic top thread.  This is here to simplify insertion of threads
+\ by ensuring that there is always at least one thread.
+
+HERE THREAD-SIZE ALLOT CONSTANT THREAD-TOP
+
+
+\ ( a-addr1 a-addr2 xt a-addr3 -- )
+\ Initialise the thread at <code>a-addr3</code> with the parameter stack
+\ at <code>a-addr2</code>, return stack at <code>a-addr1</code> and
+\ word to execute represented by <code>xt</code>.
+
+#: THREAD-OPEN  8B0C458B , 4D8B085D , 007D8B04 , 8B10C583 , 35 C,
+                THREAD-CURRENT , 8904568B , 7A89047E , 00778900 ,
+                8B045789 , 15 C, 2 #% , A1084789 , 0E #% , 890C5F89 ,
+                47891057 , 184F8914 , C3 C,
+
+#!   8b 45 0C           movl (3*okf_cell_size)(%ebp), %eax
+#!   8b 5d 08           movl (2*okf_cell_size)(%ebp), %ebx
+#!   8b 4d 04           movl okf_cell_size(%ebp), %ecx
+#!   8b 7d 00           movl (%ebp) %edi
+#!   83 c5 10           addl $(4*okf_cell_size), %ebp
+#!   8b 35 XX XX XX XX  movl THREAD-CURRENT, %esi
+#!   8b 56 04           movl okf_thread_next(%esi), %edx
+#!   89 7e 04           movl %edi, okf_thread_next(%esi)
+#!   89 7a 00           movl %edi, okf_thread_prev(%edx)
+#!   89 77 00           movl %esi, okf_thread_prev(%edi)
+#!   89 57 04           movl %edx, okf_thread_next(%edi)
+#!   8b 15 YY YY YY YY  movl okf_base, %edx
+#!   89 47 08           movl %eax, okf_thread_rsp(%edi)
+#!   a1 ZZ ZZ ZZ ZZ     movl okf_input, %eax
+#!   89 5f 0c           movl %ebx, okf_thread_psp(%edi)
+#!   89 57 10           movl %edx, okf_thread_base(%edi)
+#!   89 47 14           movl %eax, okf_thread_input(%edi)
+#!   89 4f 18           movl %ecx, okf_thread_pc(%edi)
+#!   c3                 ret
+
+# perhaps a more Forthish approach would be to define
+#
+#   : THREAD-RETURN-STACK   8 + ;
+#   : THREAD-DATA-STACK    12 + ;
+#   : THREAD-WORD          24 + ;
+#
+# and have THREAD-OPEN only take one argument and take care of
+# initialising all the other fields.  You'd then initialise
+# a thread by doing :-
+#
+#   <new-data-stack>   <thread> THREAD-DATA-STACK !
+#   <new-return-stack> <thread> THREAD-RETURN-STACK !
+#   <xt>               <thread> THREAD-WORD !
+#   <thread> THREAD-OPEN
+
+
+\ ( a-addr -- )
+\ Yield to the next thread.  If there is only one thread then this
+\ is logically a NOOP.
+
+#: THREAD-YIELD  8B C, 3D C, THREAD-CURRENT , 8B C, 1D C, 0E #% ,
+                 58 C, 8B C, 15 C, 2 #% , 8904778B , 6F890867 ,
+                 1057890C , 89145F89 , 668B1847 , 0C6E8B08 , 8B10468B ,
+                 5E C, 14 C, A3 C, 2 #% , 89 C, 1D C, 0E #% ,
+                 89 C, 35 C, THREAD-CURRENT , FF C, 66 C, 18 C,
+
+#!   8B 3D XX XX XX XX  movl THREAD-CURRENT, %edi
+#!   8B 1D YY YY YY YY  movl okf_in_current, %ebx
+#!   58                 popl %eax
+#!   8b 15 ZZ ZZ ZZ ZZ  movl okf_base, %edx
+#!   8B 77 04           movl okf_thread_next(%edi), %esi
+#!   89 67 08           movl %esp, okf_thread_rsp(%edi)
+#!   89 6F 0C           movl %ebp, okf_thread_psp(%edi)
+#!   89 57 10           movl %edx, okf_thread_base(%edi)
+#!   89 5F 14           movl %ebx, okf_thread_input(%edi)
+#!   89 47 18           movl %eax, okf_thread_pc(%edi)
+#!   8B 66 08           movl okf_thread_rsp(%esi), %esp
+#!   8B 6E 0C           movl okf_thread_psp(%esi), %ebp
+#!   8B 46 10           movl okf_thread_base(%esi), %eax
+#!   8B 5E 14           movl okf_thread_input(%esi), %ebx
+#!   A3 ZZ ZZ ZZ ZZ     movl %eax, okf_base
+#!   89 1D YY YY YY YY  movl %ebx, okf_in_current
+#!   89 35 XX XX XX XX  movl %esi, THREAD-CURRENT
+#!   FF 66 18           jmp okf_thread_pc(%esi)
+
+
+\ ( a-addr -- )
+\ Remove the thread at <code>a-addr</code> from the active threads.
+
+#: THREAD-CLOSE  8B00458B , 488B0058 , 04C58304 , 89044b89 , C30059 ,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   8B 58 00  movl okf_thread_prev(%eax), %ebx
+#!   8B 48 04  movl okf_thread_next(%eax), %ecx
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   89 4B 04  movl %ecx, okf_thread_next(%ebx)
+#!   89 59 00  movl %ebx, okf_thread_prev(%ecx)
+#!   C3        ret
+
+
+\ The following bit of hackery initialises THREAD-CURRENT to point at
+\ THREAD-TOP, initialises the prev/next fields of THREAD-TOP to point
+\ to itself and initialises the rest of THREAD-TOP (parameter stack,
+\ return stack, input and base) by yielding to itself.
+
+THREAD-TOP DUP DUP !
+DUP DUP CELL+ !
+DUP THREAD-CURRENT !
+THREAD-YIELD
+
+
+\ ( -- )
+\ Start the thread system.  Until this is called, no threads will be
+\ activated.
+
+\ : THREAD-START  THREAD-YIELD  THREAD-TOP THREAD-CLOSE THREAD-YIELD ;
+
+: THREAD-START  THREAD-TOP THREAD-CLOSE THREAD-YIELD ;
+
+\ This splices out THREAD-TOP on the assumption that by the time the
+\ thread system is started all the input has been read and so there
+\ is no need to try and read more.

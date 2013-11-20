@@ -1,0 +1,60 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/posix.okf
+
+\ Test out POSIX-ALARM (with a little help from POSIX-SIGACTION and
+\ POSIX-PAUSE).
+\
+\ The test involves setting up a signal handler for SIGALRM,
+\ using POSIX-ALARM to generate an alarm in 5 seconds and then pausing
+\ until the alarm is received.
+\
+\ Run it by doing :-
+\
+\  $ ./okf test-posix-alarm.okf
+\
+\ and if all is well you should see :-
+\
+\   pausing ...
+\   caught signal 14
+\   pausing over, bye 
+\
+
+
+\ ( -- n )
+\ The argument to a signal handler comes through on %esp, so 
+\ the following copies it from there to the parameter stack.
+\ See bib.linux.sig.handler.
+
+#: SIG#  0824448B , 83FC4589 , 00C304ED ,
+
+#!   8b 44 24 08     movl okf_cell_size(%esp), %eax
+#!   89 45 FC        movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04        subl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+\ The simple handler.  All it does is print out a message and then
+\ return.  Note that ." and CR use go direct to system calls so it
+\ it is safe to use them in a signal handler.
+
+: HANDLER ." caught signal " SIG# . CR ;
+
+CREATE ACTION POSIX-SIGACTION-SIZE ALLOT
+
+' HANDLER ACTION POSIX-SIGACTION-SA-HANDLER + !
+0         ACTION POSIX-SIGACTION-SA-MASK    + !
+0         ACTION POSIX-SIGACTION-SA-FLAGS   + !
+
+: INSTALL 0 ACTION POSIX-SIGALRM POSIX-SIGACTION
+            ABORT" could not install SIGALARM handler" ;
+
+: BEFORE ." pausing ..." CR ;
+: AFTER ." pausing over, bye " CR ;
+
+INSTALL
+DECIMAL
+5 POSIX-ALARM DROP
+BEFORE
+POSIX-PAUSE
+AFTER

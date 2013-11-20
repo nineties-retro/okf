@@ -1,0 +1,55 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/posix.okf
+
+\ Test out POSIX-SIGACTION.
+\ Does so by establishing a handler for SIGINT and then going into
+\ an infinite loop.  If all is well, if a SIGINT is received then
+\ a message of the form
+\
+\   caught signal 2
+\
+\ should be output.  This will continue until the process is killed.
+\ If you run this inside Shell Mode in GNU Emacs then an easy way to
+\ send SIGINT is just to type C-c C-c.  To terminate the program
+\ send in some other signal, e.g. SIGQUIT (C-c C-\ in Emacs).
+\
+\ Run it by doing
+\
+\ ./okf test/test-posix-sigaction.okf
+
+
+\ ( -- n )
+\ The argument to a signal handler comes through on %esp, so 
+\ the following copies it from there to the parameter stack.
+\ See bib.linux.sig.handler.
+
+#: SIG#  0824448B , 83FC4589 , 00C304ED ,
+
+#!   8b 44 24 08     movl (2*okf_cell_size)(%esp), %eax
+#!   89 45 FC        movl %eax, -okf_cell_size(%ebp)
+#!   83 ED 04        subl $okf_cell_size, %ebp
+#!   C3              ret
+
+
+\ The simple handler.  All it does is print out a message and then
+\ return.  Note that ." and CR use go direct to system calls so it
+\ it is safe to use them in a signal handler.
+
+: HANDLER ." caught signal " SIG# . CR ;
+
+CREATE ACTION POSIX-SIGACTION-SIZE ALLOT
+
+' HANDLER ACTION POSIX-SIGACTION-SA-HANDLER + !
+0         ACTION POSIX-SIGACTION-SA-MASK    + !
+0         ACTION POSIX-SIGACTION-SA-FLAGS   + !
+
+
+: INSTALL 0 ACTION POSIX-SIGINT POSIX-SIGACTION
+            ABORT" could not install SIGINT handler" ;
+
+\ a nasty little busy wait.
+: MAIN BEGIN AGAIN ;
+
+INSTALL
+MAIN

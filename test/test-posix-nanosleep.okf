@@ -1,0 +1,64 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/posix.okf
+
+\ Test out POSIX-NANOSLEEP (with a little help from POSIX-SIGACTION)
+\
+\ The test involves setting up a signal handler for SIGINT and then
+\ using POSIX-NANOSLEEP to generate 5 second delay.  This gives you
+\ 5 seconds to interrupt the process otherwise it will exit normally.
+\
+\ Run it by doing :-
+\
+\   $ ./okf test/test-posix-nanosleep.okf
+\   you have 5 seconds to interrupt ...
+\   no interrupt, sleep period over
+\
+\ In this case, no interrupt was sent within 5 seconds.
+\
+\   $ ./okf test/test-posix-nanosleep.okf
+\   you have 5 seconds to interrupt ...
+\   interrupted sleep, with 4s 260000000us left
+\   $ 
+
+
+\ The simple handler.  It does nothing.
+
+: HANDLER ;
+
+CREATE ACTION POSIX-SIGACTION-SIZE ALLOT
+
+' HANDLER ACTION POSIX-SIGACTION-SA-HANDLER + !
+0         ACTION POSIX-SIGACTION-SA-MASK    + !
+0         ACTION POSIX-SIGACTION-SA-FLAGS   + !
+
+: INSTALL 0 ACTION POSIX-SIGINT POSIX-SIGACTION
+            ABORT" could not install SIGINT handler" ;
+
+CREATE DELAY POSIX-TIMESPEC-SIZE ALLOT
+CREATE TIME-LEFT POSIX-TIMESPEC-SIZE ALLOT
+
+DECIMAL
+
+5 DELAY POSIX-TIMESPEC-TV_SEC  + !
+0 DELAY POSIX-TIMESPEC-TV_NSEC + !
+
+: DISPLAY-TIME ( a-addr -- ) 
+  DUP POSIX-TIMESPEC-TV_SEC + @ . ." s " 
+  POSIX-TIMESPEC-TV_NSEC + @ . ." us" ;
+
+( -- u )
+: SLEEP TIME-LEFT DELAY POSIX-NANOSLEEP ;
+
+: INTERUPTED ." interrupted sleep, with "
+              TIME-LEFT DISPLAY-TIME ."  left" CR ;
+
+: UNINTERUPTED ." no interrupt, sleep period over" CR ;
+
+: DOIT SLEEP 0< IF INTERUPTED ELSE UNINTERUPTED THEN ;
+
+: DISPLAY-START-BANNER ." you have 5 seconds to interrupt ..." CR ;
+
+INSTALL
+DISPLAY-START-BANNER
+DOIT

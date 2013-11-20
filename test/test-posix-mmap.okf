@@ -1,0 +1,43 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/posix.okf
+
+\ Test out POSIX-MMAP (with the help of POSIX-OPEN).
+\ Does so by opening /dev/zero and mmapping 4K of it as private
+\ and readable/writable.  Initialises each byte with 0x0A and then
+\ checks that each byte does contain 0x0A.
+\
+\ Run it by doing :-
+\
+\  $ ./okf test/test-posix-mmap.okf
+\  phew, made it
+
+
+: OPEN ( -- fd ) 0 POSIX-O_RDONLY S" /dev/zero" DROP POSIX-OPEN 
+                 DUP 0< ABORT" could not open /dev/zero" ;
+
+POSIX-PROT_WRITE POSIX-PROT_READ OR CONSTANT PROT
+POSIX-MAP_PRIVATE                   CONSTANT FLAGS
+
+1000 CONSTANT LEN
+0    CONSTANT START
+OPEN CONSTANT FD
+0    CONSTANT OFF
+
+: MMAP ( -- addr ) OFF FD FLAGS PROT LEN START POSIX-MMAP
+                   DUP 0< ABORT" mmap failed" ;
+
+: AFTER ." phew, made it" CR ;
+
+: INIT ( a-addr u -- )
+  DUP IF   1- SWAP 0A OVER C! CHAR+ SWAP ITERATE
+      ELSE 2DROP THEN ;
+
+: CHECK-CHAR ( c-addr -- ) C@ 0A = 0= ABORT" bad match!" ;
+
+: CHECK ( a-addr u -- )
+   DUP IF   1- SWAP DUP CHECK-CHAR CHAR+ SWAP ITERATE
+       ELSE 2DROP THEN ;
+
+MMAP LEN 2DUP INIT CHECK
+AFTER

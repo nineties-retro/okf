@@ -1,0 +1,60 @@
+#! ANS FORTH STRING -TRAILING
+#! ( c-addr u1 -- c-addr2 u2)
+#!
+
+#! ANS FORTH STRING /STRING
+#! ( c-addr1 u1 n -- c-addr2 u2 )
+#! Adjust the character string at <code>c-addr1</code> by <code>n</code>
+#! characters.  The resulting character string specified by
+#! <code>c-addr2</code> <code>u2</code XXX
+#! characters and is <code>u1</code> minus <code>n</code> characters long.
+
+
+#! ANS FORTH STRING BLANK
+#! ( c-addr u -- )
+#! If <code>u</code> is greater than zero, store the character value for
+#! space in consecutive character positions starting at <code>c-addr</code>.
+
+
+#! ANS FORTH STRING COMPARE
+#! ( c-addr1 u1 c-addr2 u2 -- XXX )
+#!
+#! XXX are identical, <code>n</code> is zero.
+#! If the two strings are identical up to the length of the shorter string,
+#! <code>n</code> is minus-one (-1) if <code>u1</code> is less than 
+#! <code>u2</code> and one (1) otherwise.  If the two strings are not 
+#! identical up to the length of the shorter string, <code>n</code> is
+#! minus-one (-1) if the first onon-matching character in teh string
+#! specified by <code>c-addr1</code> <code>u1</code> has a lesser
+#! numeric value than the corresponding character in the string specified
+#! by <code>c-addr2</code> <code>u2</code> and one (1) otherwise.
+
+
+#! ANS FORTH STRING CMOVE
+#! ( c-addr1 c-addr2 u -- )
+#! If <code>u</code> is greater than zero, copy <code>u</code>
+#! consecutive characters from the data space starting at 
+#! <code>c-addr1</code> to that starting at <code>c-addr2</code>,
+#! proceeding character-by-character from lower addresses to
+#! higher addresses.
+
+#! ANS FORTH STRING CMOVE>
+#! ( c-addr1 c-addr2 u -- )
+#! If <code>u</code> is greater than zero, copy <code>u</code>
+#! consecutive characters from the data space starting at 
+#! <code>c-addr1</code> to that starting at <code>c-addr2</code>,
+#! proceeding character-by-character from higher addresses to
+#! lower addresses.
+
+
+#! ANS FORTH STRING SEARCH
+#! ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag )
+#! Search the string specified by <code>c-addr2</code> <code>u2</code>.
+#! If <code>flag</code> is true, XXX was found at <code>c-addr3</code>
+#! with <code>u3</code> characters remaining.  If <code>flag</code>
+#! is false there was no match and <code>c-addr3</code> is
+#! <code>c-addr1</code> and <code>u3</code> is <code>u1</code>.
+
+
+#! ANS FORTH STRING SLITERAL
+#! defined in ans-core.okf

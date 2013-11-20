@@ -1,0 +1,367 @@
+#! ANS FORTH CORE EXT words.
+#! Not all the words are here, only the ones that have been needed to
+#! construct various examples/tests.  The missing words are explicitly 
+#! listed.
+
+
+#! ANS FORTH CORE EXT #TIB
+#! ( -- a-addr )
+#! <code>a-addr</code> is the address of a cell containing the number
+#! of characters in the terminal input buffer.
+#! This word is obselecent and is included as a concession to existing
+#! implementations
+
+0 CONSTANT #TIB
+
+#! The above will cause any application that tries to derference 
+#! <code>#TIB</code> to generate a SEGV.
+
+
+#! ANS FORTH CORE EXT .(
+#! compilation:
+#!   perform the execution semantics below.
+#! execution: ( "ccc<paren>" )
+#!   Parse and display <code>ccc</code> delimited by a right parenthesis.
+#!   <code>.(</code> is an immediate word.
+
+: .(  E9 C, 1 ,  29 PARSE  #NUL-TERMINATE
+      OVER OVER SWAP 4 - +!  POSTPONE SLITERAL TYPE ;  IMMEDIATE
+
+
+#! ANS FORTH CORE EXT .R
+#! ( n1 n2 -- )
+#! Display <code>n1</code> right aligned in a field <code>n2</code>
+#! characters wide.  If the number of characters required to display
+#! <code>n1</code> is creater than <code>n2</code>, all digits are 
+#! displayed with no leading spaces in a field as wide as necessary.
+#! XXX: The following is a hack until such time as I can be bothered
+#! to implement it properly.
+
+: .R  DROP . ;
+
+
+#! ANS FORTH CORE EXT 0<>
+#! x -- flag
+#! <code>flag</code> is true if and only if <code>x</code> is not equal
+#! to zero.
+
+#: 0<>  C700458B , 00000045 , C0850000 , 0045950F , C3 C,
+
+#!   8b 45 00              movl (%ebp), %eax
+#!   c7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   85 c0                 testl %eax, %eax
+#!   0f 95 45 00           setnz (%ebp)
+#!   c3                    ret
+
+
+#! ANS FORTH CORE EXT 0>
+#! n -- flag
+#! <code>flag</code> is true if and only if <code>n</code> is greater
+#! than zero.
+
+#: 0>  C700458B , 00000045 , C0850000 , 00459F0F , C3 C,
+
+#!   8b 45 00              movl (%ebp), %eax
+#!   c7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   85 c0                 testl %eax, %eax
+#!   0f 9f 45 00           setg (%ebp)
+#!   c3                    ret
+
+
+#! ANS FORTH CORE EXT 2>R
+#! interpretation:
+#!   undefined.
+#! execution: ( x1 x2 -- ) ( R: -- x1 x2 )
+#!   Transfer cell pair <code>x1 x2</code> to the return stack.
+#!   Semantically equivalent to <code>SWAP >R >R</code>.
+
+: 2>R  SWAP >R >R ;
+
+
+#! ANS FORTH CORE EXT 2R>
+#! interpretation:
+#!   undefined.
+#! execution: ( -- x1 x2 ) ( R: x1 x2 -- )
+#!   Transfer cell pair <code>x1 x2</code> from the return stack.
+#!   Semantically equivalent to <code>>R >R SWAP</code>.
+
+: 2R> R> R> SWAP ;
+
+
+#! ANS FORTH CORE EXT 2R@
+#! interpretation:
+#!   undefined.
+#! execution: ( -- x1 x2 ) ( R: x1 x2 -- x1 x2 )
+#!   Copy cell pair <code>x1 x2</code> from the return stack.
+#!   Semantically equivalent to <code>>R >R 2DUP >R >R SWAP</code>.
+
+: 2@  >R >R 2DUP >R >R SWAP ;
+
+
+#! ANS FORTH CORE EXT :NONAME
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT <>
+#! x1 x2 -- flag
+#! <code>flag</code> is true if and only if <code>x1</code> is not
+#! bit-for-bit the same as <code>x2</code>
+
+#: <>  8B04C583 , 453BFC45 , 0045C700 , 00000000 , 0045950F , C3 C,
+
+#!   83 C5 04              addl $okf_cell_size, %ebp
+#!   8B 45 FC              movl -okf_cell_size(%ebp), %eax
+#!   3B 45 00              cmpl (%ebp), %eax
+#!   C7 45 00 00 00 00 00  movl $0, (%ebp)
+#!   0F 95 45 00           setne (%ebp)
+#!   C3                    ret
+
+
+#! ANS FORTH CORE EXT ?DO
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT AGAIN
+#! interpretation:
+#!   undefined
+#! compilation: ( addr -- )
+#!   Append the run-time semantics given below to the current definition,
+#!   resolving the backward reference to <code>addr</code>.
+#! run-time: ( -- )
+#!   Continue execution at <code>addr</code>.  If no other control
+#!   flow words are used, any program code after <code>AGAIN</code>
+#!   will not be executed.
+
+: AGAIN  E9 C, HERE - 4 - , ; IMMEDIATE
+
+
+#! ANS FORTH CORE EXT C"
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT CASE
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT COMPILE,
+#! Defined in ans-core.okf
+
+
+#! ANS FORTH CORE EXT CONVERT
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT ENDCASE
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT ENDOF
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT ERASE
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT EXPECT
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT FALSE
+#! -- false
+#! Return a <code>false</code> flag.
+
+0 CONSTANT FALSE
+
+
+#! ANS FORTH CORE EXT HEX
+#! -- 
+#! Set the numeric conversion radix to 16.
+
+: HEX  10 BASE ! ;
+
+
+#! ANS FORTH CORE EXT MARKER
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT NIP
+#! x1 x2 -- x2
+#! Remove <code>x1</code> from the stack
+
+#: NIP  8900458B , C5830445 , 04 C, C3 C,
+
+#!   8B 45 00  movl (%ebp), %eax
+#!   89 45 04  movl %eax, okf_cell_size(%ebp)
+#!   83 C5 04  addl $okf_cell_size, %ebp
+#!   C3        ret
+
+
+#! ANS FORTH CORE EXT OF
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT PAD
+#! Defined in ans-core.okf
+
+#! ANS FORTH CORE EXT PICK
+#! Defined in ans-core.okf
+
+#! ANS FORTH CORE EXT QUERY
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT REFILL
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT RESTORE-INPUT
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT ROLL
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT SAVE-INPUT
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT SOURCE-ID
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT SPAN
+#! ( -- a-addr )
+#! <code>a-addr</code> is the address of a cell containing the count
+#! of characters stored by the last execution of <code>EXPECT</code>
+#! This word is obselecent and is included as a concession to existing
+#! implementations
+
+0 CONSTANT SPAN
+
+#! The above will cause any application that tries to derference 
+#! <code>SPAN</code> to generate a SEGV.
+
+
+#! ANS FORTH CORE EXT TIB
+#! ( -- c-addr )
+#! <code>c-addr</code> is the address of ther terminal input buffer.
+#! This word is obselecent and is included as a concession to existing
+#! implementations
+
+0 CONSTANT TIB
+
+#! The above will cause any application that tries to derference 
+#! <code>TIB</code> to generate a SEGV.
+
+
+#! ANS FORTH CORE EXT TO
+#! interpretation: ( x "<spaces>name" )
+#!   Skip leading spaces and parse <code>name</code> delimited by
+#!   whitespace.  Store <code>x</code> in <code>name</code>.
+#!   XXX: explain what happens if <code>name</code> was not defined
+#!   by <code>VALUE</code>.
+#! compilation: ( "<spaces>name" -- )
+#!   Skip leading spaces and parse <code>name</code> delimited by
+#!   whitespace.  Append the run-time semantics given below to the
+#!   current definition.
+#!   XXX: explain what happens if <code>name</code> was not defined
+#!   by <code>VALUE</code>.
+#! run-time: ( x -- )
+#!   Store <code>x</code> in <code>name</code>.
+
+: TO  ' 3 + ! ;
+
+#! The above overwrites the literal value that is 
+#! generated by ans-core.okf.LITERAL.
+
+
+#! ANS FORTH CORE EXT TRUE
+#! -- true
+#! Return a <code>true</code> flag.
+
+1 CONSTANT TRUE
+
+
+#! ANS FORTH CORE EXT TUCK
+#! ( x1 x2 -- x2 x1 x2 )
+#! Copy the first (top) stack item below the second stack item.
+
+
+#! ANS FORTH CORE EXT U.R
+#! ( u n -- )
+#! Display <code>u</code> right aligned in a field <code>n</code>
+#! characters wide.  If the number of characters required to display
+#! <code>u</code> is creater than <code>n</code>, all digits are 
+#! displayed with no leading spaces in a field as wide as necessary.
+#! XXX: The following is a hack until such time as I can be bothered
+#! to implement it properly.
+
+: U.R  DROP U. ;
+
+
+#! ANS FORTH CORE U>
+#! u1 u2 -- flag
+#! <code>flag</code> is true if and only if <code>u1</code> is greater then
+#! <code>u2</code>
+
+#: U>  3900458B , 45C70445 , 00000004 , 45970F00 , 04C58304 , C3 C,
+
+#!   8b 45 00              movl (%ebp), %eax
+#!   3b 45 04              cmpl okf_cell_size(%ebp), %eax
+#!   c7 45 04 00 00 00 00  movl $0, okf_cell_size(%ebp)
+#!   0f 97 45 04           seta 4(%ebp)
+#!   83 c5 04              addl $okf_cell_size, %ebp
+#!   c3                    ret
+
+
+#! ANS FORTH CORE EXT UNUSED
+#! ( -- u )
+#! <code>u</code> is the amount of space remaining in the region 
+#! addressed by <code>HERE</code>, in address units.
+
+: UNUSED  0C #% @  03 #% @  - ;
+
+
+#! ANS FORTH CORE EXT VALUE
+#! ( x "<spaces>name" -- )
+#!   Skip leading space delimiters.  Parse <code>name</code> delimited by
+#!   whitespace.  Create a definition for <code>name</code> with the
+#!   execution semantics defined below, with an initial value equal to
+#!   <code>x</code>.
+#! <code>name</code> exection:
+#!   Place <code>x</code> on the stack.  The value of <code> is that
+#!   given when <code>name</code> was created, until the phrase
+#!   <code>x TO name</code> is executed, causing a new value of
+#!   <code>x</code> to be associated with <code>name</code>.
+
+: VALUE  #: POSTPONE LITERAL C3 C, ;
+
+
+#! ANS FORTH CORE EXT WITHIN
+#! NOT IMPLEMENTED
+
+
+#! ANS FORTH CORE EXT [COMPILE]
+#! interpretation:
+#!   Undefined.
+#! compilation: ( "<spaces>name" -- )
+#!   Skip leading whitespace.  Parse <code>name</code> delimited by
+#!   whitespace.  Find <code>name</code>.  If <code>name</code> has
+#!   other than default compilation semantics, append them to the
+#!   current definition; otherwise append the execution semantics of
+#!   <code>name</code>.   XXX: explain what happens if <code>name</code>
+#!   is not found.
+
+: [COMPILE]  ' COMPILE, ; IMMEDIATE
+
+
+#! ANS FORTH CORE EXT \
+#! compilation:
+#!   Perform the execution semantics given below
+#! execution: "ccc<eol>" -- 
+#!   Parse and discard the remainder of the input up until and including
+#!   the first <code>\n</code>.
+
+: \  POSTPONE #! ; IMMEDIATE

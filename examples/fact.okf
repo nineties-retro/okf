@@ -1,0 +1,29 @@
+#< lib/ans-core.okf
+#< lib/ans-core-ext.okf
+#< lib/okf.okf
+#< lib/posix.okf
+
+\ A simple fact micro-benchmark.
+\
+\ Example Usage:
+\
+\  $ ./okf examples/fact.okf 4
+\  4 24
+
+DECIMAL
+
+: FACT  DUP 2 < IF DROP 1 ELSE DUP 1 - RECURSE * THEN ;
+
+\ ( -- c-addr u )
+: SCRIPT-NAME  ARGV @ @ DUP STRLEN ;
+
+\ ( -- c-addr u )
+: ARG1  ARGV @ CELL+ @ DUP STRLEN ;
+
+: FACT-WRAPPER  ARG1 ATOU 0= IF DUP . SPACE FACT . CR THEN ;
+
+: WRONG-ARGS  SCRIPT-NAME TYPE SPACE ." wrong args bozo!" CR ;
+
+: MAIN  ARGC @ 2 = IF FACT-WRAPPER ELSE DROP WRONG-ARGS THEN ;
+
+MAIN
